@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/loginFragment">
+
+    <fragment
+        android:id="@+id/loginFragment"
+        android:name="com.example.railticket.ui.login.LoginFragment"
+        android:label="Login" >
+        <action
+            android:id="@+id/action_loginFragment_to_trainSearchFragment"
+            app:destination="@id/trainSearchFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/trainSearchFragment"
+        android:name="com.example.railticket.ui.trainsearch.TrainSearchFragment"
+        android:label="TrainSearchFragment"
+        tools:layout="@layout/fragment_train_search">
+        <action
+            android:id="@+id/action_trainSearchFragment_to_seatSelectionFragment"
+            app:destination="@id/seatSelectionFragment" />
+        <action
+            android:id="@+id/action_trainSearchFragment_to_otpVerificationFragment"
+            app:destination="@id/otpVerificationFragment">
+            <argument
+                android:name="tripId"
+                app:argType="string" />
+            <argument
+                android:name="tripRouteId"
+                app:argType="string" />
+            <argument
+                android:name="ticketIds"
+                app:argType="string[]" />
+            <argument
+                android:name="authToken"
+                app:argType="string" />
+            <argument
+                android:name="numberOfSeats"
+                app:argType="integer" />
+            <argument
+                android:name="boardingPointId"
+                app:argType="string" />
+            <!-- fromCity, toCity, etc. will be picked up from OtpVerificationFragment's args by SafeArgs -->
+        </action>
+    </fragment>
+
+    <fragment
+        android:id="@+id/seatSelectionFragment"
+        android:name="com.example.railticket.ui.booking.SeatSelectionFragment"
+        android:label="SeatSelectionFragment"
+        tools:layout="@layout/fragment_seat_selection">
+        <action
+            android:id="@+id/action_seatSelectionFragment_to_otpVerificationFragment"
+            app:destination="@id/otpVerificationFragment"
+            app:popUpTo="@id/trainSearchFragment">
+            <argument
+                android:name="tripId"
+                app:argType="string" />
+            <argument
+                android:name="tripRouteId"
+                app:argType="string" />
+            <argument
+                android:name="ticketIds"
+                app:argType="string[]" />
+            <argument
+                android:name="authToken"
+                app:argType="string" />
+            <argument
+                android:name="numberOfSeats"
+                app:argType="integer" />
+            <argument
+                android:name="boardingPointId"
+                app:argType="string" />
+            <!-- fromCity, toCity, etc. will be picked up from OtpVerificationFragment's args by SafeArgs -->
+        </action>
+    </fragment>
+
+    <fragment
+        android:id="@+id/otpVerificationFragment"
+        android:name="com.example.railticket.ui.booking.OtpVerificationFragment"
+        android:label="OtpVerificationFragment"
+        tools:layout="@layout/fragment_otp_verification">
+        <argument
+            android:name="tripId"
+            app:argType="string" />
+        <argument
+            android:name="tripRouteId"
+            app:argType="string" />
+        <argument
+            android:name="ticketIds"
+            app:argType="string[]" />
+        <argument
+            android:name="authToken"
+            app:argType="string" />
+        <argument
+            android:name="numberOfSeats"
+            app:argType="integer" />
+        <argument
+            android:name="boardingPointId"
+            app:argType="string" />
+        <!-- New arguments for OtpVerificationFragment -->
+        <argument
+            android:name="fromCity"
+            app:argType="string" />
+        <argument
+            android:name="toCity"
+            app:argType="string" />
+        <argument
+            android:name="dateOfJourney"
+            app:argType="string" />
+        <argument
+            android:name="seatClass"
+            app:argType="string" />
+        <action
+            android:id="@+id/action_otpVerificationFragment_to_passengerDetailsFragment"
+            app:destination="@id/passengerDetailsFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/passengerDetailsFragment"
+        android:name="com.example.railticket.ui.passengerdetails.PassengerDetailsFragment"
+        android:label="Passenger Details"
+        tools:layout="@layout/fragment_passenger_details">
+        <argument
+            android:name="tripId"
+            app:argType="string" />
+        <argument
+            android:name="tripRouteId"
+            app:argType="string" />
+        <argument
+            android:name="ticketIds"
+            app:argType="string[]" />
+        <argument
+            android:name="sessionAuthToken"
+            app:argType="string" />
+        <argument
+            android:name="submittedOtp"
+            app:argType="string" />
+        <argument
+            android:name="userName"
+            app:argType="string" />
+        <argument
+            android:name="userEmail"
+            app:argType="string" />
+        <argument
+            android:name="userMobile"
+            app:argType="string" />
+        <argument
+            android:name="numberOfSeats"
+            app:argType="integer" />
+        <argument
+            android:name="boardingPointId"
+            app:argType="string" />
+        <!-- New arguments for PassengerDetailsFragment -->
+        <argument
+            android:name="fromCity"
+            app:argType="string" />
+        <argument
+            android:name="toCity"
+            app:argType="string" />
+        <argument
+            android:name="dateOfJourney"
+            app:argType="string" />
+        <argument
+            android:name="seatClass"
+            app:argType="string" />
+    </fragment>
+
+</navigation>
