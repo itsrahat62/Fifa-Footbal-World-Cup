@@ -10,6 +10,8 @@ import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.fragment.app.Fragment
+import androidx.navigation.fragment.findNavController
+import com.example.railticket.R
 import com.example.railticket.databinding.FragmentLoginBinding
 
 class LoginFragment : Fragment() {
@@ -23,6 +25,11 @@ class LoginFragment : Fragment() {
         fun postToken(token: String) {
             Log.d("LoginFragment", "Token from WebView: $token")
             authToken = token
+            activity?.runOnUiThread {
+                if (findNavController().currentDestination?.id == R.id.loginFragment) {
+                    findNavController().navigate(R.id.action_loginFragment_to_trainSearchFragment)
+                }
+            }
         }
     }
 
