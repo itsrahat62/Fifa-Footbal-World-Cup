@@ -21,15 +21,15 @@ class LoginRepository private constructor(
 
     val isLoggedIn: Boolean
         get() {
-            val loggedIn = user != null
-            Log.d(TAG, "isLoggedIn check: $loggedIn. User object is ${if (user == null) "null" else "NOT null"}")
+            val loggedIn = TokenManager.authToken != null
+            Log.d(TAG, "isLoggedIn check: $loggedIn. TokenManager has token: ${TokenManager.authToken != null}")
             return loggedIn
         }
 
     fun logout() {
-        Log.d(TAG, "logout() called. Current user token before clearing: ${user?.token}")
+        Log.d(TAG, "logout() called. Clearing user and TokenManager token.")
         user = null
-        // Assuming dataSource.logout() handles its own logging or cleanup if necessary
+        TokenManager.authToken = null // Clear the global token
         dataSource.logout() 
     }
 
@@ -40,15 +40,12 @@ class LoginRepository private constructor(
         password: String
     ): Result<LoggedInUser> {
         Log.d(TAG, "login() called in repository with mobile: $mobileNumber")
-        // Pass appVersion and deviceId if dataSource.login signature is updated in the future
-        // For now, it matches the existing dataSource.login(mobileNumber, password)
         val result = dataSource.login(mobileNumber, password) 
         if (result is Result.Success) {
             setLoggedInUser(result.data)
+            TokenManager.authToken = result.data.token
         } else if (result is Result.Error) {
             Log.w(TAG, "Login failed in repository. Error: ${result.message}")
-            // Consider if user should be nulled out on a failed subsequent login attempt
-            // For now, only a successful login sets/updates the user.
         }
         return result
     }
@@ -59,8 +56,8 @@ class LoginRepository private constructor(
     }
 
     fun getAuthToken(): String? {
-        val token = user?.token
-        Log.d(TAG, "getAuthToken() called. User is ${if (user == null) "null" else "NOT null"}. Returning token: ${token?.take(15)}...")
+        val token = TokenManager.authToken
+        Log.d(TAG, "getAuthToken() called. Returning token from TokenManager. Token is ${if (token == null) "null" else "NOT null"}.")
         return token
     }
 

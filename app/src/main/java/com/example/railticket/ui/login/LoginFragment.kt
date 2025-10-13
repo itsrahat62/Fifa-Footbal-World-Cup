@@ -12,19 +12,19 @@ import android.webkit.WebViewClient
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import com.example.railticket.R
+import com.example.railticket.data.TokenManager
 import com.example.railticket.databinding.FragmentLoginBinding
 
 class LoginFragment : Fragment() {
 
     private var _binding: FragmentLoginBinding? = null
     private val binding get() = _binding!!
-    private var authToken: String? = null
 
     inner class WebAppInterface(private val context: Context) {
         @JavascriptInterface
         fun postToken(token: String) {
             Log.d("LoginFragment", "Token from WebView: $token")
-            authToken = token
+            TokenManager.authToken = token
             activity?.runOnUiThread {
                 if (findNavController().currentDestination?.id == R.id.loginFragment) {
                     findNavController().navigate(R.id.action_loginFragment_to_trainSearchFragment)

@@ -1,7 +1,7 @@
 package com.example.railticket.data.model.booking
 
-// Assuming SeatLayoutData will be in SeatLayoutDataNew.kt
+import com.google.gson.annotations.SerializedName
+
 data class SeatLayoutResponse(
-    val data: SeatLayoutData? = null,
-    val extra: Map<String, String>? = null
+    @SerializedName("data") val data: SeatLayoutData?
 )

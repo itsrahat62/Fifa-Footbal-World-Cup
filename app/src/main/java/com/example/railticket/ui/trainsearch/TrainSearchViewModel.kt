@@ -114,7 +114,7 @@ class TrainSearchViewModel(
             }
 
             _bookingState.value = BookingProgress(isLoading = true, message = "Searching for trips...")
-            val searchResult = bookingDataSource.searchTrips(fromCity, toCity, dateOfJourney, seatClassForSearch, token)
+            val searchResult = bookingDataSource.searchTrips(fromCity, toCity, dateOfJourney, seatClassForSearch)
 
             if (searchResult is Result.Error) {
                 _bookingState.value = BookingProgress(isLoading = false, error = Event(searchResult.message ?: "Failed to search trips."))
@@ -144,7 +144,7 @@ class TrainSearchViewModel(
             val apiTripRouteIdLong: Long = targetSeatType.trip_route_id
             
             _bookingState.value = BookingProgress(isLoading = true, message = "Fetching seat layout for ${targetTrain.trip_number}...")
-            val seatLayoutResult = bookingDataSource.getSeatLayout(apiTripId, apiTripRouteIdLong.toString(), token)
+            val seatLayoutResult = bookingDataSource.getSeatLayout(apiTripId, apiTripRouteIdLong.toString())
 
             if (seatLayoutResult is Result.Error) {
                 _bookingState.value = BookingProgress(isLoading = false, error = Event(seatLayoutResult.message ?: "Failed to fetch seat layout."))
@@ -190,8 +190,7 @@ class TrainSearchViewModel(
                 Log.d(TAG, "Reserving seat ${successfullyReservedTicketIdsS.size + 1} of $numberOfSeatsToBookN (Attempt $seatsAttempted/${allAvailableTicketIds.size}, ID: $ticketIdToTry)..." )
                 
                 val reserveResult = bookingDataSource.reserveSeat(
-                    ReserveSeatRequest(ticketId = ticketIdToTry, routeId = apiTripRouteIdLong), 
-                    token
+                    ReserveSeatRequest(ticketId = ticketIdToTry, routeId = apiTripRouteIdLong) 
                 )
 
                 when (reserveResult) {
@@ -259,7 +258,6 @@ class TrainSearchViewModel(
             
             val passengerDetailsResultFromApi = bookingDataSource.sendPassengerDetails(
                 request = passengerDetailsRequest, 
-                token = details.authToken,
                 appVersion = "1.0.0", // Placeholder - Consider making this dynamic
                 deviceId = "placeholder-device-id" // Placeholder - Consider making this dynamic
             )
@@ -276,7 +274,7 @@ class TrainSearchViewModel(
                     tripRouteId = details.tripRouteId,
                     ticketIds = details.reservedTicketIds.map { it.toString() }.toTypedArray(),
                     authToken = details.authToken,
-                    numberOfSeats = details.reservedSeatsS, 
+                    numberOfSeats = details.reservedSeatsS,
                     boardingPointId = details.boardingPointId,
                     fromCity = details.fromCity,
                     toCity = details.toCity,
@@ -284,11 +282,12 @@ class TrainSearchViewModel(
                     seatClass = details.seatClass
                 )
                 _navigateToOtpEvent.postValue(Event(navData))
-                _bookingState.value = BookingProgress(isLoading = false, success = Event("OTP Sent for ${details.reservedSeatsS} seat(s)."))
+                Log.i(TAG, "Successfully sent passenger details and got OTP trigger. Navigating to OTP screen.")
+                _bookingState.value = BookingProgress(isLoading = false, success = Event("OTP sent successfully. Please check your device."))
             } else {
-                val errorMsg = passengerDetailsResponseData?.message ?: "OTP initiation failed."
-                Log.e(TAG, "OTP initiation failed from API. Message: $errorMsg, Success Flag: ${passengerDetailsResponseData?.success}")
-                _bookingState.value = BookingProgress(isLoading = false, error = Event("Failed to initiate OTP: $errorMsg"))
+                val apiErrorMessage = passengerDetailsResponseData?.message ?: "API indicated failure after sending passenger details."
+                Log.e(TAG, apiErrorMessage)
+                _bookingState.value = BookingProgress(isLoading = false, error = Event(apiErrorMessage))
             }
         }
     }

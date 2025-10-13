@@ -74,7 +74,7 @@ class OtpVerificationViewModel(
                 Log.d("OtpVerificationVM", "Request Body (booking flow): $request")
                 
                 // Call the verifyOtp in BookingDataSource that expects appVersion and deviceId
-                val result = bookingDataSource.verifyOtp(request, authToken, appVersion, deviceId)
+                val result = bookingDataSource.verifyOtp(request, appVersion, deviceId)
                 _otpVerificationResult.postValue(Event(result))
 
                 // Check result type with explicit generic argument for booking VerifyOtpResponse

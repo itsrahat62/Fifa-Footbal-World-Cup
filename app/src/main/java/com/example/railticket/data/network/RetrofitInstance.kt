@@ -16,8 +16,12 @@ object RetrofitInstance {
         level = HttpLoggingInterceptor.Level.BODY // Log request and response bodies
     }
 
-    // Create an OkHttpClient and add the logging interceptor
+    // Create an Auth interceptor
+    private val authInterceptor = AuthInterceptor()
+
+    // Create an OkHttpClient and add the interceptors
     private val okHttpClient = OkHttpClient.Builder()
+        .addInterceptor(authInterceptor)
         .addInterceptor(loggingInterceptor)
         .connectTimeout(30, TimeUnit.SECONDS) // Optional: Set timeouts
         .readTimeout(30, TimeUnit.SECONDS)
@@ -33,7 +37,7 @@ object RetrofitInstance {
     private val retrofit: Retrofit by lazy {
         Retrofit.Builder()
             .baseUrl(BASE_URL)
-            .client(okHttpClient) // Use the OkHttpClient with the logger
+            .client(okHttpClient) // Use the OkHttpClient with the interceptors
             .addConverterFactory(GsonConverterFactory.create(gson)) // Use the modified Gson instance
             .build()
     }
