@@ -26,6 +26,7 @@ class LoginDataSource {
 
     private val WEB_AUTH_BASE_URL = "https://railspaapi.shohoz.com/v1.0/web/auth"
     private val APP_BOOKINGS_BASE_URL = "https://railspaapi.shohoz.com/v1.0/app/bookings"
+    private val X_DEVICE_KEY = "114e6a31e406bf79f2efa4ea722293f7a477112801cf30f7422790a7733d4871e4ddbe7aaabb40565b05f9351eb158cfbc812ab918bec911e21874da8742bf23a27ee880db53705e34b09440b0dcb4e6"
 
     suspend fun login(mobileNumber: String, password: String): Result<LoggedInUser> =
         withContext(Dispatchers.IO) {
@@ -89,15 +90,12 @@ class LoginDataSource {
     suspend fun requestOtp(appVersion: String, deviceId: String, authToken: String, otpRequest: OtpRequest): Result<OtpResponseData> =
         withContext(Dispatchers.IO) {
             Log.d(TAG, "requestOtp called with token: $authToken, request: $otpRequest, AppVersion: $appVersion, DeviceID: $deviceId")
-            // TODO: Implement actual network call for requestOtp based on correct API specification
-            // It will likely be similar to verifyOtp in terms of URL construction (query params) and headers.
-            // For now, returning a placeholder as it's not the immediate issue being addressed.
             Result.Error(Exception(NotImplementedError("requestOtp not implemented in DataSource")), "Feature not implemented (requestOtp in DataSource).")
         }
 
     suspend fun verifyOtp(appVersion: String, deviceId: String, authToken: String, verifyOtpRequest: VerifyOtpRequest): Result<VerifyOtpResponse> =
         withContext(Dispatchers.IO) {
-            val urlString = "$APP_BOOKINGS_BASE_URL/verify-otp?android_app_version=$appVersion&android_device_id=$deviceId"
+            val urlString = "$APP_BOOKINGS_BASE_URL/verify-otp"
             Log.d(TAG, "verifyOtp called. URL: $urlString, Token: Bearer ${authToken.take(15)}..., Request: $verifyOtpRequest")
             try {
                 val url = URL(urlString)
@@ -106,10 +104,9 @@ class LoginDataSource {
                 connection.setRequestProperty("Content-Type", "application/json")
                 connection.setRequestProperty("Accept", "application/json")
                 connection.setRequestProperty("Authorization", "Bearer $authToken")
-                // The following headers might be redundant if already in query params, but APIs can be picky.
-                // If the API only expects them in query params, these header lines can be removed.
-                connection.setRequestProperty("App-Version", appVersion) 
-                connection.setRequestProperty("Device-ID", deviceId)
+                connection.setRequestProperty("X-Device-Key", X_DEVICE_KEY)
+                connection.setRequestProperty("X-App-Version", appVersion) 
+                connection.setRequestProperty("X-Device-Id", deviceId)
                 connection.doOutput = true
                 connection.connectTimeout = 15000
                 connection.readTimeout = 15000
