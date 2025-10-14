@@ -12,13 +12,15 @@ import android.widget.RadioButton
 import android.widget.Toast
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.navArgs
-import com.example.railticket.R // Assuming this is your R file
-import com.example.railticket.data.network.RetrofitInstance // Import the real RetrofitInstance
+import com.example.railticket.R
+import com.example.railticket.data.network.RetrofitInstance
 import com.example.railticket.data.repository.BookingRepository
 import com.example.railticket.databinding.FragmentPassengerDetailsBinding
 import com.example.railticket.databinding.ItemPassengerFormBinding
+import com.example.railticket.util.Event
 
 class PassengerDetailsFragment : Fragment() {
 
@@ -29,6 +31,8 @@ class PassengerDetailsFragment : Fragment() {
     private val args: PassengerDetailsFragmentArgs by navArgs()
 
     private val passengerForms = mutableListOf<ItemPassengerFormBinding>()
+
+    private val deviceKey = "114e6a31e406bf79f2efa4ea722293f7a477112801cf30f7422790a7733d487185cf02f8031aa577e0ca4f0c16563c30586808a50e00beb1d3331b2c949e5b254ea8e0a767e5b2a46bc6a9036757c3ba"
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -44,18 +48,10 @@ class PassengerDetailsFragment : Fragment() {
         val realBookingService = RetrofitInstance.bookingService
         val bookingRepository = BookingRepository(realBookingService)
         
-        val appVersion = "1.0.0" // TODO: Replace with actual app version from BuildConfig or constants
         val deviceId = android.provider.Settings.Secure.getString(requireContext().contentResolver, android.provider.Settings.Secure.ANDROID_ID) ?: "mock_device_id_fallback"
 
-        val factory = PassengerDetailsViewModelFactory(bookingRepository, appVersion, deviceId)
+        val factory = PassengerDetailsViewModelFactory(bookingRepository, deviceId)
         viewModel = ViewModelProvider(this, factory)[PassengerDetailsViewModel::class.java]
-
-        // Log arguments received by PassengerDetailsFragment
-        Log.d("PassengerDetailsFrag", "Arguments received:")
-        Log.d("PassengerDetailsFrag", "  From City: ${args.fromCity}")
-        Log.d("PassengerDetailsFrag", "  To City: ${args.toCity}")
-        Log.d("PassengerDetailsFrag", "  Date of Journey: ${args.dateOfJourney}")
-        Log.d("PassengerDetailsFrag", "  Seat Class: ${args.seatClass}")
 
         setupUI()
         observeViewModel()
@@ -65,9 +61,6 @@ class PassengerDetailsFragment : Fragment() {
         binding.contactNameEdittext.setText(args.userName)
         binding.contactEmailEdittext.setText(args.userEmail)
         binding.contactMobileEdittext.setText(args.userMobile)
-
-        // Set default payment method (Nagad is checked by default in XML)
-        // binding.paymentMethodRadiogroup.check(R.id.radio_button_nagad) // Already done in XML
 
         binding.passengerFormsContainer.removeAllViews()
         passengerForms.clear()
@@ -117,17 +110,12 @@ class PassengerDetailsFragment : Fragment() {
         var allFormsValid = true
 
         for ((index, formBinding) in passengerForms.withIndex()) {
-            val name: String
-            if (index == 0) {
-                name = args.userName
+            val name = if (index == 0) args.userName else formBinding.passengerNameEditText.text.toString().trim()
+            if (name.isEmpty()) {
+                formBinding.passengerNameLayout.error = getString(R.string.required_field)
+                allFormsValid = false
             } else {
-                name = formBinding.passengerNameEditText.text.toString().trim()
-                if (name.isEmpty()) {
-                    formBinding.passengerNameLayout.error = getString(R.string.required_field)
-                    allFormsValid = false
-                } else {
-                    formBinding.passengerNameLayout.error = null
-                }
+                formBinding.passengerNameLayout.error = null
             }
             passengerNames.add(name)
 
@@ -137,8 +125,8 @@ class PassengerDetailsFragment : Fragment() {
                 allFormsValid = false
             } else {
                 formBinding.passengerTypeLayout.error = null
-                passengerTypes.add(type)
             }
+            passengerTypes.add(type)
 
             val selectedGenderId = formBinding.genderRadiogroup.checkedRadioButtonId
             if (selectedGenderId == -1) {
@@ -160,57 +148,29 @@ class PassengerDetailsFragment : Fragment() {
              return
         }
 
-        // Payment method specific parameters
-        val isBkashOnline: Boolean? 
-        val selectedMobileTransaction: Int?
-
-        when (binding.paymentMethodRadiogroup.checkedRadioButtonId) {
-            R.id.radio_button_bkash -> {
-                isBkashOnline = true
-                selectedMobileTransaction = 1
-                Log.d("PassengerDetailsFrag", "Bkash selected. isBkashOnline: true, selectedMobileTransaction: 1")
-            }
-            R.id.radio_button_nagad -> {
-                isBkashOnline = false // Updated requirement for Nagad
-                selectedMobileTransaction = 3 // Updated requirement for Nagad
-                Log.d("PassengerDetailsFrag", "Nagad selected. isBkashOnline: false, selectedMobileTransaction: 3")
-            }
-            else -> {
-                Toast.makeText(context, "Please select a payment method.", Toast.LENGTH_SHORT).show()
-                return // Exit if no payment method selected
-            }
-        }
-
-        Log.d("PassengerDetailsFrag", "handleSubmit: Calling viewModel.confirmBooking with:")
-        Log.d("PassengerDetailsFrag", "  fromCity: '${args.fromCity}'")
-        Log.d("PassengerDetailsFrag", "  toCity: '${args.toCity}'")
-        // ... (add other existing logs if needed)
-        Log.d("PassengerDetailsFrag", "  isBkashOnline: $isBkashOnline")
-        Log.d("PassengerDetailsFrag", "  selectedMobileTransaction: $selectedMobileTransaction")
+        val selectedMobileTransaction = if (binding.paymentMethodRadiogroup.checkedRadioButtonId == R.id.radio_button_bkash) "1" else "3"
+        
+        val ticketIdsAsLongs = args.ticketIds.map { it.toLong() }
 
         viewModel.confirmBooking(
-            tripIdStr = args.tripId,          
-            tripRouteIdStr = args.tripRouteId,  
-            ticketIdsStr = args.ticketIds.toList(), 
-            boardingPointIdStr = args.boardingPointId, 
-            contactPersonEmail = args.userEmail, 
-            contactPersonMobile = args.userMobile, 
-            passengerNames = passengerNames,      
+            tripId = args.tripId.toLong(),
+            tripRouteId = args.tripRouteId.toLong(),
+            ticketIds = ticketIdsAsLongs,
+            boardingPointId = args.boardingPointId.toLong(),
             passengerTypes = passengerTypes,
+            contactEmail = args.userEmail,
+            contactMobile = args.userMobile,
+            passengerNames = passengerNames,
             genders = genders,
-            otpParam = args.submittedOtp,      
+            selectedMobileTransaction = selectedMobileTransaction,
+            otp = args.submittedOtp,
             authToken = args.sessionAuthToken,
-            fromCity = args.fromCity,
-            toCity = args.toCity,
-            dateOfJourney = args.dateOfJourney,
-            seatClass = args.seatClass,
-            isBkashOnline = isBkashOnline, 
-            selectedMobileTransaction = selectedMobileTransaction
+            deviceKey = deviceKey
         )
     }
 
     private fun observeViewModel() {
-        viewModel.bookingConfirmationState.observe(viewLifecycleOwner) { state ->
+        viewModel.bookingConfirmationState.observe(viewLifecycleOwner, Observer { state ->
             binding.passengerDetailsProgressBar.isVisible = state.isLoading
             binding.submitPassengerDetailsButton.isEnabled = !state.isLoading
 
@@ -218,16 +178,10 @@ class PassengerDetailsFragment : Fragment() {
                 Toast.makeText(context, "Booking Error: $errorMsg", Toast.LENGTH_LONG).show()
             }
             state.successUrl?.getContentIfNotHandled()?.let { redirectUrl ->
-                val numberOfTickets = args.ticketIds.size // Get the number of tickets
-                if (numberOfTickets > 0) { // Ensure there are tickets
-                    Toast.makeText(context, "$numberOfTickets ticket reserve successful", Toast.LENGTH_LONG).show()
-                } else {
-                    // Fallback or generic success message if ticket count is somehow zero
-                    Toast.makeText(context, "Booking successful!", Toast.LENGTH_LONG).show() 
-                }
-                handleBookingSuccess(redirectUrl) // Proceed with redirection
+                Toast.makeText(context, "${args.ticketIds.size} ticket reserve successful", Toast.LENGTH_LONG).show()
+                handleBookingSuccess(redirectUrl)
             }
-        }
+        })
     }
     
     private fun handleBookingSuccess(redirectUrl: String) {

@@ -9,36 +9,32 @@ import java.util.concurrent.TimeUnit
 
 object RetrofitInstance {
 
-    private const val BASE_URL = "https://railspaapi.shohoz.com/" // Your base API URL
+    private const val BASE_URL = "https://railspaapi.shohoz.com/"
 
-    // Create a logging interceptor (optional, but very useful for debugging)
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
-        level = HttpLoggingInterceptor.Level.BODY // Log request and response bodies
+        level = HttpLoggingInterceptor.Level.BODY
     }
 
-    // Create an Auth interceptor
-    private val authInterceptor = AuthInterceptor()
+    // The AuthInterceptor was causing duplicate headers and has been removed.
+    // Headers are now handled directly in the BookingService interface.
 
-    // Create an OkHttpClient and add the interceptors
     private val okHttpClient = OkHttpClient.Builder()
-        .addInterceptor(authInterceptor)
         .addInterceptor(loggingInterceptor)
-        .connectTimeout(30, TimeUnit.SECONDS) // Optional: Set timeouts
+        .connectTimeout(30, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)
         .writeTimeout(30, TimeUnit.SECONDS)
         .build()
 
-    // Configure Gson to serialize nulls and be lenient
     private val gson = GsonBuilder()
-        .setLenient() // Example: if your API sometimes returns slightly malformed JSON
-        .serializeNulls() // Add this to include null fields in the JSON output
+        .setLenient()
+        .serializeNulls()
         .create()
 
     private val retrofit: Retrofit by lazy {
         Retrofit.Builder()
             .baseUrl(BASE_URL)
-            .client(okHttpClient) // Use the OkHttpClient with the interceptors
-            .addConverterFactory(GsonConverterFactory.create(gson)) // Use the modified Gson instance
+            .client(okHttpClient)
+            .addConverterFactory(GsonConverterFactory.create(gson))
             .build()
     }
 

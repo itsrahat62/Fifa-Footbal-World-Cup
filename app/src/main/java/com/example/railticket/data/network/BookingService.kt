@@ -2,8 +2,8 @@ package com.example.railticket.data.network
 
 import com.example.railticket.data.model.booking.ConfirmBookingRequest
 import com.example.railticket.data.model.booking.ConfirmBookingResponse
-import com.example.railticket.data.model.booking.PassengerDetailsRequest // Added import
-import com.example.railticket.data.model.booking.PassengerDetailsResponse // Added import
+import com.example.railticket.data.model.booking.PassengerDetailsRequest
+import com.example.railticket.data.model.booking.PassengerDetailsResponse
 import com.example.railticket.data.model.booking.ReserveSeatRequest
 import com.example.railticket.data.model.booking.ReserveSeatResponse
 import com.example.railticket.data.model.booking.SeatLayoutResponse
@@ -13,6 +13,7 @@ import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.Header
+import retrofit2.http.Headers
 import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.Query
@@ -20,10 +21,14 @@ import retrofit2.http.Query
 interface BookingService {
 
     @PATCH("v1.0/web/bookings/confirm")
+    @Headers(
+        "Accept: application/json",
+        "Content-Type: application/json"
+    )
     suspend fun confirmBooking(
         @Header("Authorization") authToken: String,
-        @Header("X-App-Version") appVersion: String,
         @Header("X-Device-Id") deviceId: String,
+        @Header("X-Device-Key") deviceKey: String,
         @Body request: ConfirmBookingRequest
     ): Response<ConfirmBookingResponse>
 
@@ -52,7 +57,6 @@ interface BookingService {
         @Body request: ReserveSeatRequest
     ): Response<ReserveSeatResponse>
 
-    // New function for sending passenger details
     @POST("v1.0/web/bookings/passenger-details")
     suspend fun sendPassengerDetails(
         @Header("Authorization") authToken: String,

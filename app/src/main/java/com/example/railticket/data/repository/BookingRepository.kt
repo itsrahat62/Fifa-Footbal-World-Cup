@@ -2,8 +2,8 @@ package com.example.railticket.data.repository
 
 import com.example.railticket.data.model.booking.ConfirmBookingRequest
 import com.example.railticket.data.model.booking.ConfirmBookingResponse
-import com.example.railticket.data.model.booking.PassengerDetailsRequest // Added import
-import com.example.railticket.data.model.booking.PassengerDetailsResponse // Added import
+import com.example.railticket.data.model.booking.PassengerDetailsRequest
+import com.example.railticket.data.model.booking.PassengerDetailsResponse
 import com.example.railticket.data.model.booking.ReserveSeatRequest
 import com.example.railticket.data.model.booking.ReserveSeatResponse
 import com.example.railticket.data.model.booking.SeatLayoutResponse
@@ -14,15 +14,15 @@ class BookingRepository(private val bookingService: BookingService) {
 
     suspend fun confirmBooking(
         authToken: String,
-        appVersion: String,
         deviceId: String,
+        deviceKey: String,
         request: ConfirmBookingRequest
     ): Response<ConfirmBookingResponse> {
         val completeAuthToken = if (authToken.startsWith("Bearer ")) authToken else "Bearer $authToken"
         return bookingService.confirmBooking(
             authToken = completeAuthToken,
-            appVersion = appVersion,
             deviceId = deviceId,
+            deviceKey = deviceKey,
             request = request
         )
     }
@@ -59,7 +59,6 @@ class BookingRepository(private val bookingService: BookingService) {
         )
     }
 
-    // New function for sending passenger details
     suspend fun sendPassengerDetails(
         authToken: String,
         appVersion: String,
