@@ -31,8 +31,9 @@ class PassengerDetailsViewModel(
         contactMobile: String,
         passengerNames: List<String>,
         genders: List<String>,
-        selectedMobileTransaction: String, // Corrected to String
+        selectedMobileTransaction: String,
         otp: String,
+        isBkashOnline: Boolean, // Corrected to non-nullable Boolean
         authToken: String,
         deviceKey: String
     ) {
@@ -52,7 +53,8 @@ class PassengerDetailsViewModel(
                     passengerName = passengerNames,
                     gender = genders,
                     selectedMobileTransaction = selectedMobileTransaction,
-                    otp = otp
+                    otp = otp,
+                    isBkashOnline = isBkashOnline
                 )
 
                 Log.d(TAG, "Executing MINIMAL confirmBooking. Request: $request")

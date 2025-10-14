@@ -13,6 +13,7 @@ data class ConfirmBookingRequest(
     @SerializedName("pmobile") val passengerMobile: String,
     @SerializedName("pname") val passengerName: List<String>,
     @SerializedName("gender") val gender: List<String>,
-    @SerializedName("selected_mobile_transaction") val selectedMobileTransaction: String, // Corrected to String
-    @SerializedName("otp") val otp: String
+    @SerializedName("selected_mobile_transaction") val selectedMobileTransaction: String,
+    @SerializedName("otp") val otp: String,
+    @SerializedName("is_bkash_online") val isBkashOnline: Boolean // Corrected to non-nullable Boolean
 )

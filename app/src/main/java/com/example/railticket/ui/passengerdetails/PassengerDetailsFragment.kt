@@ -148,7 +148,9 @@ class PassengerDetailsFragment : Fragment() {
              return
         }
 
-        val selectedMobileTransaction = if (binding.paymentMethodRadiogroup.checkedRadioButtonId == R.id.radio_button_bkash) "1" else "3"
+        val isBkash = binding.paymentMethodRadiogroup.checkedRadioButtonId == R.id.radio_button_bkash
+        val selectedMobileTransaction = if (isBkash) "1" else "3"
+        val isBkashOnline = isBkash // This will be true for bKash, false for Nagad
         
         val ticketIdsAsLongs = args.ticketIds.map { it.toLong() }
 
@@ -164,6 +166,7 @@ class PassengerDetailsFragment : Fragment() {
             genders = genders,
             selectedMobileTransaction = selectedMobileTransaction,
             otp = args.submittedOtp,
+            isBkashOnline = isBkashOnline, // Pass the correct boolean value
             authToken = args.sessionAuthToken,
             deviceKey = deviceKey
         )
