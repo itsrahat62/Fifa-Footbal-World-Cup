@@ -13,6 +13,7 @@ import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import com.example.railticket.R
 import com.example.railticket.data.TokenManager
+import com.example.railticket.data.UserManager
 import com.example.railticket.databinding.FragmentLoginBinding
 
 class LoginFragment : Fragment() {
@@ -30,6 +31,12 @@ class LoginFragment : Fragment() {
                     findNavController().navigate(R.id.action_loginFragment_to_trainSearchFragment)
                 }
             }
+        }
+
+        @JavascriptInterface
+        fun postMobileNumber(mobileNumber: String) {
+            Log.d("LoginFragment", "Mobile Number - $mobileNumber")
+            UserManager.mobileNumber = mobileNumber
         }
     }
 
@@ -55,12 +62,27 @@ class LoginFragment : Fragment() {
         webView.webViewClient = object : WebViewClient() {
             override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)
+                Log.d("LoginFragment", "onPageFinished: Injecting comprehensive script into $url")
                 val script = """
                     (function() {
-                        // Intercept fetch
+                        console.log('Shohoz Interceptor v2: Running...');
+
+                        // --- Intercept fetch API ---
                         const originalFetch = window.fetch;
                         window.fetch = function(url, options) {
-                            if (typeof url === 'string' && url.includes('https://railspaapi.shohoz.com/v1.0/web/auth/sign-in')) {
+                            if (typeof url === 'string' && url.includes('/v1.0/web/auth/sign-in')) {
+                                console.log('Shohoz Interceptor v2: Intercepted FETCH sign-in call.');
+                                if (options && options.body) {
+                                    try {
+                                        const body = JSON.parse(options.body);
+                                        if (body.mobile_number) {
+                                            console.log('Shohoz Interceptor v2: Found mobile in fetch body:', body.mobile_number);
+                                            Android.postMobileNumber(body.mobile_number);
+                                        }
+                                    } catch (e) {
+                                        console.error('Shohoz Interceptor v2: Error parsing fetch body', e);
+                                    }
+                                }
                                 return originalFetch.apply(this, arguments).then(response => {
                                     if (response.ok) {
                                         response.clone().json().then(data => {
@@ -75,23 +97,41 @@ class LoginFragment : Fragment() {
                             return originalFetch.apply(this, arguments);
                         };
 
-                        // Intercept XMLHttpRequest
+                        // --- Intercept XMLHttpRequest API ---
+                        const originalXHROpen = XMLHttpRequest.prototype.open;
+                        XMLHttpRequest.prototype.open = function(method, url) {
+                            this._url = url; // Store URL for later use
+                            return originalXHROpen.apply(this, arguments);
+                        };
+
                         const originalXHRSend = XMLHttpRequest.prototype.send;
                         XMLHttpRequest.prototype.send = function(data) {
+                            if (this._url && typeof this._url === 'string' && this._url.includes('/v1.0/web/auth/sign-in')) {
+                                console.log('Shohoz Interceptor v2: Intercepted XHR sign-in call.');
+                                try {
+                                    const body = JSON.parse(data);
+                                    if (body.mobile_number) {
+                                        console.log('Shohoz Interceptor v2: Found mobile in XHR body:', body.mobile_number);
+                                        Android.postMobileNumber(body.mobile_number);
+                                    }
+                                } catch (e) {
+                                    console.error('Shohoz Interceptor v2: Error parsing XHR body', e);
+                                }
+                            }
+
                             this.addEventListener('load', function() {
-                                if (this.responseURL.includes('https://railspaapi.shohoz.com/v1.0/web/auth/sign-in')) {
+                                if (this._url && typeof this._url === 'string' && this._url.includes('/v1.0/web/auth/sign-in')) {
                                     try {
                                         const responseData = JSON.parse(this.responseText);
                                         if (responseData && responseData.data && responseData.data.token) {
                                             Android.postToken(responseData.data.token);
                                         }
                                     } catch (e) {
-                                        // Not a JSON response or parsing error, ignore.
-                                        console.error('Error parsing response from sign-in API', e);
+                                        console.error('Shohoz Interceptor v2: Error parsing XHR response', e);
                                     }
                                 }
                             });
-                            originalXHRSend.apply(this, arguments);
+                            return originalXHRSend.apply(this, arguments);
                         };
                     })();
                 """
