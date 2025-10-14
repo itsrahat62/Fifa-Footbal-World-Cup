@@ -8,10 +8,25 @@
     <fragment
         android:id="@+id/loginFragment"
         android:name="com.example.railticket.ui.login.LoginFragment"
-        android:label="Login" >
+        android:label="Login"
+        tools:layout="@layout/fragment_login">
         <action
-            android:id="@+id/action_loginFragment_to_trainSearchFragment"
-            app:destination="@id/trainSearchFragment" />
+            android:id="@+id/action_login_to_security"
+            app:destination="@id/securityCodeFragment"
+            app:popUpTo="@id/loginFragment"
+            app:popUpToInclusive="true" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/securityCodeFragment"
+        android:name="com.example.railticket.ui.securitycode.SecurityCodeFragment"
+        android:label="Security Code"
+        tools:layout="@layout/fragment_security_code">
+        <action
+            android:id="@+id/action_security_to_search"
+            app:destination="@id/trainSearchFragment"
+            app:popUpTo="@id/securityCodeFragment"
+            app:popUpToInclusive="true" />
     </fragment>
 
     <fragment
@@ -43,7 +58,6 @@
             <argument
                 android:name="boardingPointId"
                 app:argType="string" />
-            <!-- fromCity, toCity, etc. will be picked up from OtpVerificationFragment's args by SafeArgs -->
         </action>
     </fragment>
 
@@ -74,7 +88,6 @@
             <argument
                 android:name="boardingPointId"
                 app:argType="string" />
-            <!-- fromCity, toCity, etc. will be picked up from OtpVerificationFragment's args by SafeArgs -->
         </action>
     </fragment>
 
@@ -101,7 +114,6 @@
         <argument
             android:name="boardingPointId"
             app:argType="string" />
-        <!-- New arguments for OtpVerificationFragment -->
         <argument
             android:name="fromCity"
             app:argType="string" />
@@ -154,7 +166,6 @@
         <argument
             android:name="boardingPointId"
             app:argType="string" />
-        <!-- New arguments for PassengerDetailsFragment -->
         <argument
             android:name="fromCity"
             app:argType="string" />

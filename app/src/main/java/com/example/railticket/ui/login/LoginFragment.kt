@@ -6,7 +6,9 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.webkit.ConsoleMessage
 import android.webkit.JavascriptInterface
+import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.fragment.app.Fragment
@@ -24,18 +26,22 @@ class LoginFragment : Fragment() {
     inner class WebAppInterface(private val context: Context) {
         @JavascriptInterface
         fun postToken(token: String) {
-            Log.d("LoginFragment", "Token from WebView: $token")
+            Log.d("LoginFragment", "postToken CALLED. Token received.")
             TokenManager.authToken = token
             activity?.runOnUiThread {
-                if (findNavController().currentDestination?.id == R.id.loginFragment) {
-                    findNavController().navigate(R.id.action_loginFragment_to_trainSearchFragment)
+                Log.d("LoginFragment", "Attempting to navigate to SecurityCodeFragment...")
+                if (isAdded && findNavController().currentDestination?.id == R.id.loginFragment) {
+                    findNavController().navigate(R.id.action_login_to_security)
+                    Log.d("LoginFragment", "Navigation command sent.")
+                } else {
+                    Log.e("LoginFragment", "Navigation FAILED. Fragment not added or already navigating.")
                 }
             }
         }
 
         @JavascriptInterface
         fun postMobileNumber(mobileNumber: String) {
-            Log.d("LoginFragment", "Mobile Number - $mobileNumber")
+            Log.d("LoginFragment", "postMobileNumber CALLED. Mobile: $mobileNumber")
             UserManager.mobileNumber = mobileNumber
         }
     }
@@ -55,38 +61,54 @@ class LoginFragment : Fragment() {
         val webView = binding.webview
         webView.settings.javaScriptEnabled = true
         webView.settings.domStorageEnabled = true
+        // Enable WebView debugging
+        WebView.setWebContentsDebuggingEnabled(true)
+        
         context?.let {
             webView.addJavascriptInterface(WebAppInterface(it), "Android")
+        }
+
+        // This allows console.log messages from JS to appear in Android's Logcat
+        webView.webChromeClient = object : WebChromeClient() {
+            override fun onConsoleMessage(consoleMessage: ConsoleMessage): Boolean {
+                Log.d("WebViewConsole", "${consoleMessage.message()} -- From line " +
+                        "${consoleMessage.lineNumber()} of ${consoleMessage.sourceId()}")
+                return super.onConsoleMessage(consoleMessage)
+            }
         }
 
         webView.webViewClient = object : WebViewClient() {
             override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)
-                Log.d("LoginFragment", "onPageFinished: Injecting comprehensive script into $url")
+                Log.d("LoginFragment", "onPageFinished: Injecting improved script into $url")
                 val script = """
                     (function() {
-                        console.log('Shohoz Interceptor v2: Running...');
-
+                        console.log('Shohoz Interceptor v3: Running...');
+                    
                         // --- Intercept fetch API ---
                         const originalFetch = window.fetch;
                         window.fetch = function(url, options) {
                             if (typeof url === 'string' && url.includes('/v1.0/web/auth/sign-in')) {
-                                console.log('Shohoz Interceptor v2: Intercepted FETCH sign-in call.');
+                                console.log('Shohoz Interceptor v3: Intercepted FETCH sign-in call.');
+                                // Capture mobile number from the REQUEST
                                 if (options && options.body) {
                                     try {
                                         const body = JSON.parse(options.body);
                                         if (body.mobile_number) {
-                                            console.log('Shohoz Interceptor v2: Found mobile in fetch body:', body.mobile_number);
+                                            console.log('Shohoz Interceptor v3: Found mobile in fetch request:', body.mobile_number);
                                             Android.postMobileNumber(body.mobile_number);
                                         }
                                     } catch (e) {
-                                        console.error('Shohoz Interceptor v2: Error parsing fetch body', e);
+                                        console.error('Shohoz Interceptor v3: Error parsing fetch request body', e);
                                     }
                                 }
+                    
+                                // Capture token from the RESPONSE
                                 return originalFetch.apply(this, arguments).then(response => {
                                     if (response.ok) {
                                         response.clone().json().then(data => {
                                             if (data && data.data && data.data.token) {
+                                                console.log('Shohoz Interceptor v3: Found token in fetch response.');
                                                 Android.postToken(data.data.token);
                                             }
                                         });
@@ -96,38 +118,41 @@ class LoginFragment : Fragment() {
                             }
                             return originalFetch.apply(this, arguments);
                         };
-
+                    
                         // --- Intercept XMLHttpRequest API ---
                         const originalXHROpen = XMLHttpRequest.prototype.open;
                         XMLHttpRequest.prototype.open = function(method, url) {
                             this._url = url; // Store URL for later use
                             return originalXHROpen.apply(this, arguments);
                         };
-
+                    
                         const originalXHRSend = XMLHttpRequest.prototype.send;
                         XMLHttpRequest.prototype.send = function(data) {
                             if (this._url && typeof this._url === 'string' && this._url.includes('/v1.0/web/auth/sign-in')) {
-                                console.log('Shohoz Interceptor v2: Intercepted XHR sign-in call.');
+                                console.log('Shohoz Interceptor v3: Intercepted XHR sign-in call.');
+                                // Capture mobile number from the REQUEST
                                 try {
                                     const body = JSON.parse(data);
                                     if (body.mobile_number) {
-                                        console.log('Shohoz Interceptor v2: Found mobile in XHR body:', body.mobile_number);
+                                        console.log('Shohoz Interceptor v3: Found mobile in XHR request:', body.mobile_number);
                                         Android.postMobileNumber(body.mobile_number);
                                     }
                                 } catch (e) {
-                                    console.error('Shohoz Interceptor v2: Error parsing XHR body', e);
+                                    console.error('Shohoz Interceptor v3: Error parsing XHR request body', e);
                                 }
                             }
-
+                    
+                            // Capture token from the RESPONSE
                             this.addEventListener('load', function() {
-                                if (this._url && typeof this._url === 'string' && this._url.includes('/v1.0/web/auth/sign-in')) {
+                                if (this.readyState === 4 && this.status === 200 && this._url && typeof this._url === 'string' && this._url.includes('/v1.0/web/auth/sign-in')) {
                                     try {
                                         const responseData = JSON.parse(this.responseText);
                                         if (responseData && responseData.data && responseData.data.token) {
+                                            console.log('Shohoz Interceptor v3: Found token in XHR response.');
                                             Android.postToken(responseData.data.token);
                                         }
                                     } catch (e) {
-                                        console.error('Shohoz Interceptor v2: Error parsing XHR response', e);
+                                        console.error('Shohoz Interceptor v3: Error parsing XHR response', e);
                                     }
                                 }
                             });
