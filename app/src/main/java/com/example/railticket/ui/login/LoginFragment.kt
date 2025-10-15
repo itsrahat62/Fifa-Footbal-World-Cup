@@ -14,6 +14,7 @@ import android.webkit.WebViewClient
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import com.example.railticket.R
+import com.example.railticket.data.DeviceKeyManager
 import com.example.railticket.data.TokenManager
 import com.example.railticket.data.UserManager
 import com.example.railticket.databinding.FragmentLoginBinding
@@ -26,7 +27,7 @@ class LoginFragment : Fragment() {
     inner class WebAppInterface(private val context: Context) {
         @JavascriptInterface
         fun postToken(token: String) {
-            Log.d("LoginFragment", "postToken CALLED. Token received.")
+            Log.d("LoginFragment", "postToken CALLED. Token received: $token")
             TokenManager.authToken = token
             activity?.runOnUiThread {
                 Log.d("LoginFragment", "Attempting to navigate to SecurityCodeFragment...")
@@ -43,6 +44,12 @@ class LoginFragment : Fragment() {
         fun postMobileNumber(mobileNumber: String) {
             Log.d("LoginFragment", "postMobileNumber CALLED. Mobile: $mobileNumber")
             UserManager.mobileNumber = mobileNumber
+        }
+
+        @JavascriptInterface
+        fun postDeviceKey(deviceKey: String) {
+            Log.d("LoginFragment", "postDeviceKey CALLED. Device Key: $deviceKey")
+            DeviceKeyManager.deviceKey = deviceKey
         }
     }
 
@@ -63,7 +70,7 @@ class LoginFragment : Fragment() {
         webView.settings.domStorageEnabled = true
         // Enable WebView debugging
         WebView.setWebContentsDebuggingEnabled(true)
-        
+
         context?.let {
             webView.addJavascriptInterface(WebAppInterface(it), "Android")
         }
@@ -102,6 +109,25 @@ class LoginFragment : Fragment() {
                                         console.error('Shohoz Interceptor v3: Error parsing fetch request body', e);
                                     }
                                 }
+                                
+                                // Capture X-Device-Key from REQUEST headers
+                                if (options && options.headers) {
+                                    const headers = options.headers;
+                                    let deviceKey = '';
+                                    if (headers instanceof Headers) {
+                                        deviceKey = headers.get('X-Device-Key');
+                                    } else { // Handle plain object headers
+                                        const lowerCaseHeaders = Object.keys(headers).reduce((acc, key) => {
+                                            acc[key.toLowerCase()] = headers[key];
+                                            return acc;
+                                        }, {});
+                                        deviceKey = lowerCaseHeaders['x-device-key'];
+                                    }
+                                    if (deviceKey) {
+                                        console.log('Shohoz Interceptor v3: Found X-Device-Key in fetch request:', deviceKey);
+                                        Android.postDeviceKey(deviceKey);
+                                    }
+                                }
                     
                                 // Capture token from the RESPONSE
                                 return originalFetch.apply(this, arguments).then(response => {
@@ -121,9 +147,19 @@ class LoginFragment : Fragment() {
                     
                         // --- Intercept XMLHttpRequest API ---
                         const originalXHROpen = XMLHttpRequest.prototype.open;
+                        const originalXHRSetRequestHeader = XMLHttpRequest.prototype.setRequestHeader;
+
                         XMLHttpRequest.prototype.open = function(method, url) {
                             this._url = url; // Store URL for later use
                             return originalXHROpen.apply(this, arguments);
+                        };
+
+                        XMLHttpRequest.prototype.setRequestHeader = function(name, value) {
+                            if (name.toLowerCase() === 'x-device-key') {
+                                console.log('Shohoz Interceptor v3: Found X-Device-Key in XHR request:', value);
+                                Android.postDeviceKey(value);
+                            }
+                            return originalXHRSetRequestHeader.apply(this, arguments);
                         };
                     
                         const originalXHRSend = XMLHttpRequest.prototype.send;

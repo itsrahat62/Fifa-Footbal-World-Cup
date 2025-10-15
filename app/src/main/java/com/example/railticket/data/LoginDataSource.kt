@@ -26,7 +26,6 @@ class LoginDataSource {
 
     private val WEB_AUTH_BASE_URL = "https://railspaapi.shohoz.com/v1.0/web/auth"
     private val APP_BOOKINGS_BASE_URL = "https://railspaapi.shohoz.com/v1.0/app/bookings"
-    private val X_DEVICE_KEY = "114e6a31e406bf79f2efa4ea722293f7a477112801cf30f7422790a7733d4871e4ddbe7aaabb40565b05f9351eb158cfbc812ab918bec911e21874da8742bf23a27ee880db53705e34b09440b0dcb4e6"
 
     suspend fun login(mobileNumber: String, password: String): Result<LoggedInUser> =
         withContext(Dispatchers.IO) {
@@ -104,7 +103,9 @@ class LoginDataSource {
                 connection.setRequestProperty("Content-Type", "application/json")
                 connection.setRequestProperty("Accept", "application/json")
                 connection.setRequestProperty("Authorization", "Bearer $authToken")
-                connection.setRequestProperty("X-Device-Key", X_DEVICE_KEY)
+                DeviceKeyManager.deviceKey?.let { deviceKey ->
+                    connection.setRequestProperty("X-Device-Key", deviceKey)
+                }
                 connection.setRequestProperty("X-App-Version", appVersion) 
                 connection.setRequestProperty("X-Device-Id", deviceId)
                 connection.doOutput = true

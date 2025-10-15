@@ -16,6 +16,7 @@ import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.navArgs
 import com.example.railticket.R
+import com.example.railticket.data.DeviceKeyManager
 import com.example.railticket.data.network.RetrofitInstance
 import com.example.railticket.data.repository.BookingRepository
 import com.example.railticket.databinding.FragmentPassengerDetailsBinding
@@ -31,8 +32,6 @@ class PassengerDetailsFragment : Fragment() {
     private val args: PassengerDetailsFragmentArgs by navArgs()
 
     private val passengerForms = mutableListOf<ItemPassengerFormBinding>()
-
-    private val deviceKey = "114e6a31e406bf79f2efa4ea722293f7a477112801cf30f7422790a7733d487185cf02f8031aa577e0ca4f0c16563c30586808a50e00beb1d3331b2c949e5b254ea8e0a767e5b2a46bc6a9036757c3ba"
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -168,7 +167,7 @@ class PassengerDetailsFragment : Fragment() {
             otp = args.submittedOtp,
             isBkashOnline = isBkashOnline, // Pass the correct boolean value
             authToken = args.sessionAuthToken,
-            deviceKey = deviceKey
+            deviceKey = DeviceKeyManager.deviceKey ?: ""
         )
     }
 

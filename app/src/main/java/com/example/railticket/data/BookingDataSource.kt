@@ -28,8 +28,6 @@ class BookingDataSource {
     private val readTimeoutMs = 15000    // 15 seconds
     private val APP_BOOKINGS_BASE_URL = "https://railspaapi.shohoz.com/v1.0/app/bookings"
     private val WEB_BOOKINGS_BASE_URL = "https://railspaapi.shohoz.com/v1.0/web/bookings" // Added for confirmBooking
-    private val X_DEVICE_KEY = "114e6a31e406bf79f2efa4ea722293f7a477112801cf30f7422790a7733d4871e4ddbe7aaabb40565b05f9351eb158cfbc812ab918bec911e21874da8742bf23a27ee880db53705e34b09440b0dcb4e6"
-
 
     suspend fun searchTrips(
         fromCity: String,
@@ -53,7 +51,9 @@ class BookingDataSource {
             val connection = url.openConnection() as HttpURLConnection
             connection.requestMethod = "GET"
             connection.setRequestProperty("Authorization", "Bearer $token")
-            connection.setRequestProperty("X-Device-Key", X_DEVICE_KEY)
+            DeviceKeyManager.deviceKey?.let { deviceKey ->
+                connection.setRequestProperty("X-Device-Key", deviceKey)
+            }
             connection.setRequestProperty("Accept", "application/json")
             connection.connectTimeout = connectTimeoutMs
             connection.readTimeout = readTimeoutMs
@@ -109,7 +109,9 @@ class BookingDataSource {
             val connection = url.openConnection() as HttpURLConnection
             connection.requestMethod = "GET"
             connection.setRequestProperty("Authorization", "Bearer $token")
-            connection.setRequestProperty("X-Device-Key", X_DEVICE_KEY)
+            DeviceKeyManager.deviceKey?.let { deviceKey ->
+                connection.setRequestProperty("X-Device-Key", deviceKey)
+            }
             connection.setRequestProperty("Accept", "application/json")
             connection.connectTimeout = connectTimeoutMs
             connection.readTimeout = readTimeoutMs
@@ -165,7 +167,9 @@ class BookingDataSource {
             val connection = url.openConnection() as HttpURLConnection
             connection.requestMethod = "PATCH"
             connection.setRequestProperty("Authorization", "Bearer $token")
-            connection.setRequestProperty("X-Device-Key", X_DEVICE_KEY)
+            DeviceKeyManager.deviceKey?.let { deviceKey ->
+                connection.setRequestProperty("X-Device-Key", deviceKey)
+            }
             connection.setRequestProperty("Content-Type", "application/json")
             connection.setRequestProperty("Accept", "application/json")
             connection.doOutput = true
@@ -246,7 +250,9 @@ class BookingDataSource {
             val connection = url.openConnection() as HttpURLConnection
             connection.requestMethod = "POST"
             connection.setRequestProperty("Authorization", "Bearer $token")
-            connection.setRequestProperty("X-Device-Key", X_DEVICE_KEY)
+            DeviceKeyManager.deviceKey?.let { deviceKey ->
+                connection.setRequestProperty("X-Device-Key", deviceKey)
+            }
             connection.setRequestProperty("X-App-Version", appVersion)      // Send as Header
             connection.setRequestProperty("X-Device-Id", deviceId)        // Send as Header
             connection.setRequestProperty("Content-Type", "application/json")
@@ -330,7 +336,9 @@ class BookingDataSource {
             val connection = url.openConnection() as HttpURLConnection
             connection.requestMethod = "POST"
             connection.setRequestProperty("Authorization", "Bearer $token")
-            connection.setRequestProperty("X-Device-Key", X_DEVICE_KEY)
+            DeviceKeyManager.deviceKey?.let { deviceKey ->
+                connection.setRequestProperty("X-Device-Key", deviceKey)
+            }
             connection.setRequestProperty("X-App-Version", appVersion)
             connection.setRequestProperty("X-Device-Id", deviceId)
             connection.setRequestProperty("Content-Type", "application/json")
