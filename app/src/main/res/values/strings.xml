@@ -1,0 +1,422 @@
+<resources>
+    <string name="app_name">RailTicket</string>
+    <!-- Strings related to login -->
+    <string name="prompt_mobile_number">Mobile Number</string>
+    <string name="prompt_password">Password</string>
+    <string name="action_sign_in">Sign in</string>
+    <string name="action_sign_in_short">Sign in</string>
+    <string name="welcome">Welcome %1$s!</string>
+    <string name="invalid_username">Not a valid mobile number</string>
+    <string name="invalid_password">Password must be >5 characters</string>
+    <string name="login_failed">"Login failed"</string>
+
+    <!-- Strings related to train search -->
+    <string name="prompt_from_city">From City</string>
+    <string name="prompt_to_city">To City</string>
+    <string name="prompt_journey_date">Journey Date</string>
+    <string name="prompt_train_name">Train Name</string>
+    <string name="label_choose_class">Choose Class</string>
+    <string name="prompt_num_of_seats">Number of Seats</string>
+    <string name="action_submit">Submit</string>
+
+    <string-array name="train_classes">
+        <item>AC_B</item>
+        <item>AC_S</item>
+        <item>SNIGDHA</item>
+        <item>F_BERTH</item>
+        <item>F_SEAT</item>
+        <item>F_CHAIR</item>
+        <item>S_CHAIR</item>
+        <item>SHOVAN</item>
+        <item>SHULOV</item>
+        <item>AC_CHAIR</item>
+    </string-array>
+
+    <!-- Strings related to passenger details -->
+    <string name="passenger_details_title">Passenger Detail</string>
+    <string name="passengers_details_title_plural">%d Passengers Details</string>
+    <string name="passenger_header_template">Passenger %d</string>
+    <string name="required_field">This field is required</string>
+    <string name="error_select_gender">Please select gender for all passengers</string>
+    <string name="error_fill_all_passenger_details">Please fill all details for each passenger</string>
+
+    <string-array name="passenger_types">
+        <item>Adult</item>
+        <item>Child</item>
+    </string-array>
+
+    <string-array name="train_names_array">
+        <item>RANGPUR EXPRESS (771)</item>
+        <item>RANGPUR EXPRESS (772)</item>
+        <item>PANCHAGARH EXPRESS (793)</item>
+        <item>PANCHAGARH EXPRESS (794)</item>
+        <item>EKOTA EXPRESS (705)</item>
+        <item>EKOTA EXPRESS (706)</item>
+        <item>RUPSHA EXPRESS (727)</item>
+        <item>RUPSHA EXPRESS (728)</item>
+        <item>DHUMKETU EXPRESS (769)</item>
+        <item>DHUMKETU EXPRESS (770)</item>
+        <item>SIMANTA EXPRESS (747)</item>
+        <item>SIMANTA EXPRESS (748)</item>
+        <item>TUNGIPARA EXPRESS (783)</item>
+        <item>TUNGIPARA EXPRESS (784)</item>
+        <item>PADMA EXPRESS (759)</item>
+        <item>PADMA EXPRESS (760)</item>
+        <item>SILKCITY EXPRESS (753)</item>
+        <item>SILKCITY EXPRESS (754)</item>
+        <item>SIRAJGANJ EXPRESS (775)</item>
+        <item>SIRAJGANJ EXPRESS (776)</item>
+        <item>LALMONI EXPRESS (751)</item>
+        <item>LALMONI EXPRESS (752)</item>
+        <item>KURIGRAM EXPRESS (797)</item>
+        <item>MADHUMATI EXPRESS (755)</item>
+        <item>KURIGRAM EXPRESS (798)</item>
+        <item>MADHUMATI EXPRESS (756)</item>
+        <item>BARENDRA EXPRESS (731)</item>
+        <item>DRUTOJAN EXPRESS (757)</item>
+        <item>DRUTOJAN EXPRESS (758)</item>
+        <item>NILSAGAR EXPRESS (765)</item>
+        <item>CHITRA EXPRESS (763)</item>
+        <item>NILSAGAR EXPRESS (766)</item>
+        <item>CHITRA EXPRESS (764)</item>
+        <item>KAPOTAKSHA EXPRESS (715)</item>
+        <item>KAPOTAKSHA EXPRESS (716)</item>
+        <item>SUNDARBAN EXPRESS (725)</item>
+        <item>SUNDARBAN EXPRESS (726)</item>
+        <item>BANGLABANDHA EXPRESS (803)</item>
+        <item>BANGLABANDHA EXPRESS (804)</item>
+        <item>BENAPOLE EXPRESS (795)</item>
+        <item>BENAPOLE EXPRESS (796)</item>
+        <item>TITUMIR EXPRESS (733)</item>
+        <item>TITUMIR EXPRESS (734)</item>
+        <item>SAGARDARI EXPRESS (761)</item>
+        <item>SAGARDARI EXPRESS (762)</item>
+        <item>DHALARCHAR EXPRESS (779)</item>
+        <item>DHALARCHAR EXPRESS (780)</item>
+        <item>KOROTOA EXPRESS (713)</item>
+        <item>KOROTOA EXPRESS (714)</item>
+        <item>DOLONCHAPA EXPRESS (768)</item>
+        <item>DOLONCHAPA EXPRESS (767)</item>
+        <item>BANALATA EXPRESS (791)</item>
+        <item>BANALATA EXPRESS (792)</item>
+        <item>SONAR BANGLA EXPRESS (787)</item>
+        <item>SONAR BANGLA EXPRESS (788)</item>
+        <item>SUBORNO EXPRESS (701)</item>
+        <item>SUBORNO EXPRESS (702)</item>
+        <item>MAHANAGAR GODHULI (703)</item>
+        <item>MAHANAGAR PROVATI (704)</item>
+        <item>TISTA EXPRESS (707)</item>
+        <item>TISTA EXPRESS (708)</item>
+        <item>UPAKUL EXPRESS (711)</item>
+        <item>UPAKUL EXPRESS (712)</item>
+        <item>PARABAT EXPRESS (709)</item>
+        <item>PARABAT EXPRESS (710)</item>
+        <item>JAYENTIKA EXPRESS (717)</item>
+        <item>JAYENTIKA EXPRESS (718)</item>
+        <item>PAHARIKA EXPRESS (719)</item>
+        <item>PAHARIKA EXPRESS (720)</item>
+        <item>MOHONAGAR EXPRESS (721)</item>
+        <item>MOHONAGAR EXPRESS (722)</item>
+        <item>UDAYAN EXPRESS (723)</item>
+        <item>UDAYAN EXPRESS (724)</item>
+        <item>AGHNIBINA EXPRESS (735)</item>
+        <item>AGHNIBINA EXPRESS (736)</item>
+        <item>EGAROSINDHUR PROVATI (737)</item>
+        <item>EGAROSINDHUR PROVATI (738)</item>
+        <item>UPABAN EXPRESS (739)</item>
+        <item>UPABAN EXPRESS (740)</item>
+        <item>TURNA (741)</item>
+        <item>TURNA (742)</item>
+        <item>BHRAMMAPUTRA EXPRESS (743)</item>
+        <item>BHRAMMAPUTRA EXPRESS (744)</item>
+        <item>JAMUNA EXPRESS (745)</item>
+        <item>JAMUNA EXPRESS (746)</item>
+        <item>EGAROSINDHUR GODHULI (749)</item>
+        <item>EGAROSINDHUR GODHULI (750)</item>
+        <item>KALNI EXPRESS (773)</item>
+        <item>KALNI EXPRESS (774)</item>
+        <item>KISHORGANJ EXPRESS (781)</item>
+        <item>KISHORGANJ EXPRESS (782)</item>
+        <item>BIJOY EXPRESS (785)</item>
+        <item>BIJOY EXPRESS (786)</item>
+        <item>MOHONGANJ EXPRESS (789)</item>
+        <item>MOHONGANJ EXPRESS (790)</item>
+        <item>JAMALPUR EXPRESS (799)</item>
+        <item>JAMALPUR EXPRESS (800)</item>
+        <item>CHATTALA EXPRESS (801)</item>
+        <item>CHATTALA EXPRESS (802)</item>
+        <item>MEGHNA EXPRESS (729)</item>
+        <item>MEGHNA EXPRESS (730)</item>
+        <item>HAWR EXPRESS (777)</item>
+        <item>HAWR EXPRESS (778)</item>
+        <item>RAJSHAHI COMMUTER (57)</item>
+        <item>RAJSHAHI COMMUTER (58)</item>
+        <item>RAJSHAHI COMMUTER (77)</item>
+        <item>RAJSHAHI COMMUTER (78)</item>
+        <item>CHILAHATI EXPRESS (805)</item>
+        <item>CHILAHATI EXPRESS (806)</item>
+        <item>NARAYANGANJ COMMUTER 1 (1001)</item>
+        <item>NARAYANGANJ COMMUTER 2 (1002)</item>
+        <item>NARAYANGANJ COMMUTER 3 (1003)</item>
+        <item>NARAYANGANJ COMMUTER 4 (1004)</item>
+        <item>NARAYANGANJ COMMUTER 5 (1005)</item>
+        <item>NARAYANGANJ COMMUTER 6 (1006)</item>
+        <item>NARAYANGANJ COMMUTER 7 (1007)</item>
+        <item>NARAYANGANJ COMMUTER 8 (1008)</item>
+        <item>NARAYANGANJ COMMUTER 9 (1009)</item>
+        <item>NARAYANGANJ COMMUTER 10 (1010)</item>
+        <item>NARAYANGANJ COMMUTER 11 (1011)</item>
+        <item>NARAYANGANJ COMMUTER 12 (1012)</item>
+        <item>NARAYANGANJ COMMUTER 13 (1013)</item>
+        <item>NARAYANGANJ COMMUTER 14 (1014)</item>
+        <item>NARAYANGANJ COMMUTER 15 (1015)</item>
+        <item>NARAYANGANJ COMMUTER 16 (1016)</item>
+        <item>LALMONI COMMUTER (61)</item>
+        <item>LALMONI COMMUTER (62)</item>
+        <item>BURIMARI COMMUTER (65)</item>
+        <item>BURIMARI COMMUTER (66)</item>
+        <item>COXS BAZAR EXPRESS (813)</item>
+        <item>COXS BAZAR EXPRESS (814)</item>
+        <item>BURIMARI EXPRESS (809)</item>
+        <item>BURIMARI EXPRESS (810)</item>
+        <item>PARJOTAK EXPRESS (815)</item>
+        <item>PARJOTAK EXPRESS (816)</item>
+        <item>BARENDRA EXPRESS (732)</item>
+        <item>KANCHON INTERCITY COMMUTER (41)</item>
+        <item>KANCHON INTERCITY COMMUTER (42)</item>
+        <item>JAHANABAD EXPRESS (825)</item>
+        <item>JAHANABAD EXPRESS (826)</item>
+        <item>RUPOSHI BANGLA EXPRESS (827)</item>
+        <item>RUPOSHI BANGLA EXPRESS (828)</item>
+        <item>SHAIKAT EXPRESS (821)</item>
+        <item>SHAIKAT EXPRESS (824)</item>
+        <item>PROBAL EXPRESS (822)</item>
+        <item>PROBAL EXPRESS (823)</item>
+        <item>CHAPAINAWABGANJ SHUTTLE (109)</item>
+        <item>CHAPAINAWABGANJ SHUTTLE (110)</item>
+        <item>DHAKA SPECIAL (10003)</item>
+        <item>TOURIST SPECIAL (10002)</item>
+        <item>TOURIST SPECIAL (10001)</item>
+    </string-array>
+
+    <string-array name="city_names_array">
+        <item>Dhaka</item>
+        <item>Biman_Bandar</item>
+        <item>Santahar</item>
+        <item>Natore</item>
+        <item>Rajshahi</item>
+        <item>Chattogram</item>
+        <item>Joydebpur</item>
+        <item>Parbatipur</item>
+        <item>Bhairab_Bazar</item>
+        <item>Joypurhat</item>
+        <item>Abdulpur</item>
+        <item>BBSetu_E</item>
+        <item>Birampur</item>
+        <item>Fulbari</item>
+        <item>Laksam</item>
+        <item>Poradaha</item>
+        <item>Akhaura</item>
+        <item>Akkelpur</item>
+        <item>Cumilla</item>
+        <item>Feni</item>
+        <item>Ishwardi</item>
+        <item>Mymensingh</item>
+        <item>Narayanganj</item>
+        <item>Bheramara</item>
+        <item>Brahmanbaria</item>
+        <item>Chuadanga</item>
+        <item>Gafargaon</item>
+        <item>Jashore</item>
+        <item>Kotchandpur</item>
+        <item>Mubarakganj</item>
+        <item>Narsingdi</item>
+        <item>Ishwardi Bypass</item>
+        <item>Tangail</item>
+        <item>Ahsanganj</item>
+        <item>Alamdanga</item>
+        <item>Chilahati</item>
+        <item>Darshana_Halt</item>
+        <item>Domar</item>
+        <item>Jamalpur_Town</item>
+        <item>Kaunia</item>
+        <item>Khulna</item>
+        <item>Kulaura</item>
+        <item>Maijgaon</item>
+        <item>Nilphamari</item>
+        <item>Noapara</item>
+        <item>Saidpur</item>
+        <item>Shaistaganj</item>
+        <item>Sreemangal</item>
+        <item>Sylhet</item>
+        <item>Chatmohar</item>
+        <item>SH M Monsur Ali</item>
+        <item>Ullapara</item>
+        <item>Azim Nagar</item>
+        <item>B Sirajul Islam</item>
+        <item>Bogura</item>
+        <item>Bonar_Para</item>
+        <item>Boral_Bridge</item>
+        <item>Dinajpur</item>
+        <item>Gaibandha</item>
+        <item>Panchbibi</item>
+        <item>Pirganj</item>
+        <item>Thakurgaon_Road</item>
+        <item>Bamondanga</item>
+        <item>Bhanugach</item>
+        <item>Chirirbandar</item>
+        <item>Kishorganj</item>
+        <item>Kismat</item>
+        <item>Kushtia_Court</item>
+        <item>Nangolkot</item>
+        <item>Pakshi</item>
+        <item>Pirgacha</item>
+        <item>Piyarpur</item>
+        <item>Quasba</item>
+        <item>Ruhia</item>
+        <item>Sararchar</item>
+        <item>Setabganj</item>
+        <item>Shamshernagar</item>
+        <item>Sonatola</item>
+        <item>Mirpur</item>
+        <item>Arani</item>
+        <item>Ashuganj</item>
+        <item>Azampur</item>
+        <item>Bajitpur</item>
+        <item>Bhanga</item>
+        <item>Faridpur</item>
+        <item>Gachihata</item>
+        <item>Gouripur_Myn</item>
+        <item>Harashpur</item>
+        <item>Kakonhat</item>
+        <item>Khoksha</item>
+        <item>Kuliarchar</item>
+        <item>Lalmonirhat</item>
+        <item>Lolitnagar</item>
+        <item>Madhnagar</item>
+        <item>Manikkhali</item>
+        <item>Methikanda</item>
+        <item>Nayapara</item>
+        <item>Pangsha</item>
+        <item>Rajbari</item>
+        <item>Rangpur</item>
+        <item>Sardah_Road</item>
+        <item>Sarishabari</item>
+        <item>Tarakandi</item>
+        <item>Cox\'s Bazar</item>
+        <item>Jamtail</item>
+        <item>Narundi</item>
+        <item>Amnura</item>
+        <item>Badarganj</item>
+        <item>Baramchal</item>
+        <item>Barhatta</item>
+        <item>Barkhata</item>
+        <item>Burimari</item>
+        <item>Chapai Nawabganj</item>
+        <item>Daulatpur</item>
+        <item>Dewanganj_Bazar</item>
+        <item>Hasanpur</item>
+        <item>Hatibandha</item>
+        <item>Islampur_Bazar</item>
+        <item>Kalukhali</item>
+        <item>Kumarkhali</item>
+        <item>Kumira</item>
+        <item>Kurigram</item>
+        <item>Mahimaganj</item>
+        <item>Melandah_Bazar</item>
+        <item>Mohanganj</item>
+        <item>Nachole</item>
+        <item>Netrakona</item>
+        <item>Patgram</item>
+        <item>Rohanpur</item>
+        <item>Safdarpur</item>
+        <item>Shyamgonj</item>
+        <item>Talora</item>
+        <item>Teesta_Junction</item>
+        <item>Tushbhandar</item>
+        <item>Nandina</item>
+        <item>Thakrokona</item>
+        <item>Aditmari</item>
+        <item>Amirabad</item>
+        <item>Amnura_Bypass</item>
+        <item>Atharabari</item>
+        <item>Badherhat</item>
+        <item>Badiakhali</item>
+        <item>Baharpur</item>
+        <item>Bajra</item>
+        <item>Benapole</item>
+        <item>Bhatiary</item>
+        <item>Bhomradah</item>
+        <item>Bhuapur</item>
+        <item>Bidyaganj</item>
+        <item>Boalmari_Bazar</item>
+        <item>Borashi</item>
+        <item>Chandpur</item>
+        <item>Chandpur_Court</item>
+        <item>Chandradighalia</item>
+        <item>Chapta</item>
+        <item>Chitoshi_Road</item>
+        <item>Choto Bahirbag</item>
+        <item>Choumuhani</item>
+        <item>Dashuria</item>
+        <item>Dhalarchar</item>
+        <item>Dublia</item>
+        <item>Gobra</item>
+        <item>Gopalganj</item>
+        <item>Gunabati</item>
+        <item>Hajiganj</item>
+        <item>Hili</item>
+        <item>Jamalganj</item>
+        <item>Jhikargacha</item>
+        <item>Kankina</item>
+        <item>Kashiani</item>
+        <item>Kashinathpur</item>
+        <item>Kendua_Bazar</item>
+        <item>Kholahati</item>
+        <item>Lokmanpur</item>
+        <item>Madhukhali</item>
+        <item>Maijdi Court</item>
+        <item>Majhgram</item>
+        <item>Mawa</item>
+        <item>Meher</item>
+        <item>Mirzapur</item>
+        <item>Modhu_Road</item>
+        <item>Montola</item>
+        <item>Mukundapur</item>
+        <item>Muladhuli</item>
+        <item>Natherpetua</item>
+        <item>Noakhali</item>
+        <item>Pabna</item>
+        <item>Pachuria</item>
+        <item>Padma</item>
+        <item>Pukuria</item>
+        <item>Raghabpur</item>
+        <item>Rajshahi_Court</item>
+        <item>Sathia_Rajapur</item>
+        <item>Shahaji_Bazar</item>
+        <item>Shashidal</item>
+        <item>Shibchar</item>
+        <item>Shibganj</item>
+        <item>Sitlai</item>
+        <item>Sonaimuri</item>
+        <item>Sreepur</item>
+        <item>Talma</item>
+        <item>Tantibandha</item>
+        <item>Tebunia</item>
+        <item>Adv. Motiur Rahman</item>
+        <item>Chakaria</item>
+        <item>Dohazari</item>
+        <item>Dulahazara</item>
+        <item>Hemnagar</item>
+        <item>Jaforshahi</item>
+        <item>Janali_Hat</item>
+        <item>Naliagram</item>
+        <item>Patiya</item>
+        <item>Ramu</item>
+        <item>Satkania</item>
+        <item>Sholoshohor</item>
+    </string-array>
+    <!-- Other strings -->
+    <string name="error_select_gender_for_passenger">Please select a gender for passenger %1$d
+    </string>
+</resources>
