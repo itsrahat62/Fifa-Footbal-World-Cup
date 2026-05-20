@@ -1593,7 +1593,13 @@ function bk2GrpSlot(g,pos){
 // Open wildcard picker
 function bk2WCClick(i){
   const used=new Set();
+  // Exclude other wildcard slots
   for(let j=0;j<8;j++){const t=bk2T('wc_'+j);if(t&&j!==i)used.add(t);}
+  // Exclude all group 1st and 2nd place picks (they can't be 3rd place)
+  'ABCDEFGHIJKL'.split('').forEach(g=>{
+    const p1=bk2T('g_'+g+'_1'),p2=bk2T('g_'+g+'_2');
+    if(p1)used.add(p1);if(p2)used.add(p2);
+  });
   const teams=Object.entries(TEAMS).filter(([n])=>!used.has(n)).map(([n,t])=>[n,t.iso]);
   bk2OpenPicker('Best 3rd-Place #'+(i+1),teams,t=>bk2SetWC(i,t));
 }
