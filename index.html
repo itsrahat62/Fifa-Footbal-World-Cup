@@ -487,6 +487,32 @@ select option{background:#0d1a2e;color:#fff}
 .modal-close:hover{background:rgba(255,255,255,0.1);color:#fff}
 .modal-close:hover{background:rgba(255,255,255,0.08);color:var(--t1)}
 
+/* TODAY'S MATCHES POPUP */
+.tdm-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.78);z-index:550;
+  display:none;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(10px)}
+.tdm-overlay.open{display:flex}
+.tdm-box{
+  background:linear-gradient(145deg,#0e1f3d 0%,#091428 100%);
+  border:1px solid rgba(255,255,255,0.13);border-radius:20px;padding:24px;
+  max-width:480px;width:100%;max-height:88vh;overflow-y:auto;
+  box-shadow:0 40px 120px rgba(0,0,0,0.85),0 0 0 1px rgba(245,197,24,0.08);
+  animation:slideUp .3s cubic-bezier(.34,1.56,.64,1)}
+.tdm-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px}
+.tdm-title{font-size:18px;font-weight:800;color:#fff}
+.tdm-title span{color:var(--gold)}
+.tdm-date{font-size:11px;color:rgba(255,255,255,0.5);text-align:right;display:block}
+.tdm-cnt{font-size:10px;font-weight:700;color:var(--gold);letter-spacing:.5px;display:block;margin-top:2px;text-align:right}
+.tdm-match{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);
+  border-radius:12px;padding:12px 14px;margin-bottom:10px}
+.tdm-match:last-child{margin-bottom:0}
+.tdm-stage{font-size:9px;font-weight:800;color:var(--gold);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px}
+.tdm-teams{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.tdm-team{display:flex;align-items:center;gap:6px;flex:1;min-width:0}
+.tdm-team>span{font-size:12px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tdm-away{justify-content:flex-end;flex-direction:row-reverse}
+.tdm-vs{font-size:9px;font-weight:800;color:rgba(255,255,255,0.3);letter-spacing:2px;flex-shrink:0}
+.tdm-info{font-size:10px;color:rgba(255,255,255,0.4);padding-top:6px;border-top:1px solid rgba(255,255,255,0.06)}
+
 /* NO RESULTS */
 .no-results{
   text-align:center;padding:60px 24px;background:var(--glass);
@@ -763,6 +789,20 @@ select option{background:#0d1a2e;color:#fff}
     <p class="bk-picker-sub" id="bkPickerSub"></p>
     <div class="bk-pick-grid" id="bkPickerOpts"></div>
     <button class="bk-picker-close" onclick="bkClosePicker()">✕ Close</button>
+  </div>
+</div>
+
+<div class="tdm-overlay" id="todayMatchModal">
+  <div class="tdm-box">
+    <div class="tdm-head">
+      <div class="tdm-title">⚽ Today's <span>Matches</span></div>
+      <div>
+        <span class="tdm-date" id="tdmDate"></span>
+        <span class="tdm-cnt" id="tdmCnt"></span>
+      </div>
+    </div>
+    <div id="tdmList"></div>
+    <button class="modal-close" style="margin-top:14px" onclick="closeTodayMatches()">✕ Close</button>
   </div>
 </div>
 
@@ -1497,8 +1537,45 @@ function buildDropdowns(){
   setInterval(()=>{updateClock();updateCD();},1000);
   document.getElementById('pollModal').addEventListener('click',e=>{if(e.target===e.currentTarget)closePoll();});
   document.getElementById('bkPickerModal').addEventListener('click',e=>{if(e.target===e.currentTarget)bkClosePicker();});
-  document.addEventListener('keydown',e=>{if(e.key==='Escape'){closePoll();bkClosePicker();}});
+  document.getElementById('todayMatchModal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeTodayMatches();});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'){closePoll();bkClosePicker();closeTodayMatches();}});
+  setTimeout(showTodayMatches,500);
 })();
+
+function showTodayMatches(){
+  if(Date.now()<new Date('2026-06-11T19:00:00Z').getTime())return;
+  const tz=selectedTZ||'UTC';
+  const todayStr=new Date().toLocaleDateString('en-CA',{timeZone:tz});
+  if(localStorage.getItem('wc2026_tdm')===todayStr)return;
+  const today=MATCHES.filter(m=>{
+    return new Date(m.utc).toLocaleDateString('en-CA',{timeZone:tz})===todayStr;
+  });
+  if(!today.length)return;
+  const dateLabel=new Date().toLocaleDateString('en',{timeZone:tz,weekday:'short',month:'long',day:'numeric',year:'numeric'});
+  const rows=today.map(m=>{
+    const time=new Date(m.utc).toLocaleTimeString('en',{timeZone:tz,hour:'2-digit',minute:'2-digit',hour12:true});
+    const hIso=TEAMS[m.home]?.iso||'';
+    const aIso=TEAMS[m.away]?.iso||'';
+    return`<div class="tdm-match">
+<div class="tdm-stage">${m.stage}</div>
+<div class="tdm-teams">
+  <div class="tdm-team">${fi(hIso,20,3)}<span>${m.home}</span></div>
+  <div class="tdm-vs">VS</div>
+  <div class="tdm-team tdm-away"><span>${m.away}</span>${fi(aIso,20,3)}</div>
+</div>
+<div class="tdm-info">⏰ ${time}&nbsp;&nbsp;·&nbsp;&nbsp;${m.venue}, ${m.city}</div>
+</div>`;
+  }).join('');
+  document.getElementById('tdmDate').textContent=dateLabel;
+  document.getElementById('tdmCnt').textContent=today.length+' match'+(today.length>1?'es':'')+' today';
+  document.getElementById('tdmList').innerHTML=rows;
+  document.getElementById('todayMatchModal').classList.add('open');
+}
+function closeTodayMatches(){
+  const tz=selectedTZ||'UTC';
+  localStorage.setItem('wc2026_tdm',new Date().toLocaleDateString('en-CA',{timeZone:tz}));
+  document.getElementById('todayMatchModal').classList.remove('open');
+}
 
 // ══════════ BRACKET PREDICTOR v2 ═════════════════════════
 const BK2_STORE='wc2026_bracket2';
