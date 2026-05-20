@@ -1593,12 +1593,23 @@ function bk2GrpSlot(g,pos){
 // Open wildcard picker
 function bk2WCClick(i){
   const used=new Set();
-  // Exclude other wildcard slots
-  for(let j=0;j<8;j++){const t=bk2T('wc_'+j);if(t&&j!==i)used.add(t);}
-  // Exclude all group 1st and 2nd place picks (they can't be 3rd place)
+  // Collect other wildcard picks (not current slot)
+  const otherWC=new Set();
+  for(let j=0;j<8;j++){const t=bk2T('wc_'+j);if(t&&j!==i){used.add(t);otherWC.add(t);}}
+  // For each group: exclude 1st & 2nd place picks, and if a 3rd-place wildcard
+  // from that group is already picked → also exclude the remaining 4th place team
   'ABCDEFGHIJKL'.split('').forEach(g=>{
     const p1=bk2T('g_'+g+'_1'),p2=bk2T('g_'+g+'_2');
-    if(p1)used.add(p1);if(p2)used.add(p2);
+    if(p1)used.add(p1);
+    if(p2)used.add(p2);
+    if(p1&&p2){
+      const grpTeams=Object.keys(TEAMS).filter(n=>TEAMS[n].group===g);
+      const wc3rd=grpTeams.find(n=>otherWC.has(n));
+      if(wc3rd){
+        const fourth=grpTeams.find(n=>n!==p1&&n!==p2&&n!==wc3rd);
+        if(fourth)used.add(fourth);
+      }
+    }
   });
   const teams=Object.entries(TEAMS).filter(([n])=>!used.has(n)).map(([n,t])=>[n,t.iso]);
   bk2OpenPicker('Best 3rd-Place #'+(i+1),teams,t=>bk2SetWC(i,t));
