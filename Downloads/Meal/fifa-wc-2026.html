@@ -564,6 +564,8 @@ select option{background:#0d1a2e;color:#fff}
 .bk2-gbadge{font-size:9px;font-weight:800;padding:1px 5px;border-radius:4px;letter-spacing:1px;margin-left:auto;flex-shrink:0}
 .bk2-gbadge.b1{background:var(--gold);color:#000}
 .bk2-gbadge.b2{background:rgba(80,200,120,0.75);color:#fff}
+.bk2-gbadge.bwc{background:rgba(100,160,255,0.55);color:#fff}
+.bk2-gteam.wc{opacity:.5;cursor:default;pointer-events:none;}
 .bk2-gslots{display:flex;gap:6px;margin-top:6px}
 .bk2-gsl{flex:1;display:flex;align-items:center;gap:5px;padding:5px 7px;border-radius:8px;border:1.5px dashed var(--border2);cursor:pointer;font-size:10px;font-weight:600;color:var(--t3);transition:all .15s;min-height:34px}
 .bk2-gsl:hover{border-color:rgba(245,197,24,0.35)}
@@ -1586,7 +1588,8 @@ function bk2GrpTeams(g){return Object.entries(TEAMS).filter(([,t])=>t.group===g)
 // Open group slot picker
 function bk2GrpSlot(g,pos){
   const p1=bk2T('g_'+g+'_1'),p2=bk2T('g_'+g+'_2'),excl=pos===1?p2:p1;
-  const teams=bk2GrpTeams(g).filter(([n])=>n!==excl);
+  const wcSet=new Set();for(let j=0;j<8;j++){const t=bk2T('wc_'+j);if(t)wcSet.add(t);}
+  const teams=bk2GrpTeams(g).filter(([n])=>n!==excl&&!wcSet.has(n));
   bk2OpenPicker('Group '+g+' — '+(pos===1?'1st':'2nd')+' Place',teams,t=>bk2SetGrp(g,pos,t));
 }
 
@@ -1620,9 +1623,14 @@ function bk2GrpTeamClick(g,team){
   const p1=bk2T('g_'+g+'_1'),p2=bk2T('g_'+g+'_2');
   if(team===p1)bk2ClearGrp(g,1);
   else if(team===p2)bk2ClearGrp(g,2);
-  else if(!p1)bk2SetGrp(g,1,team);
-  else if(!p2)bk2SetGrp(g,2,team);
-  else bk2SetGrp(g,2,team);
+  else{
+    // Block if already picked as a wildcard
+    const isWC=Array.from({length:8},(_,j)=>bk2T('wc_'+j)).some(t=>t===team);
+    if(isWC)return;
+    if(!p1)bk2SetGrp(g,1,team);
+    else if(!p2)bk2SetGrp(g,2,team);
+    else bk2SetGrp(g,2,team);
+  }
 }
 
 // Build one match card HTML
@@ -1644,14 +1652,17 @@ function bk2MC(lbl,tA,tB,winner,fnA,fnB,clearFn){
 function bk2Render(){
   // ── Group cards ──
   let gh='';
+  const wcSet=new Set();for(let j=0;j<8;j++){const t=bk2T('wc_'+j);if(t)wcSet.add(t);}
   'ABCDEFGHIJKL'.split('').forEach(g=>{
     const p1=bk2T('g_'+g+'_1'),p2=bk2T('g_'+g+'_2');
     const trows=bk2GrpTeams(g).map(([n,iso])=>{
-      const isP1=n===p1,isP2=n===p2;
-      const cls='bk2-gteam'+(isP1?' p1':isP2?' p2':'');
-      const badge=isP1?'<span class="bk2-gbadge b1">1st</span>':isP2?'<span class="bk2-gbadge b2">2nd</span>':'';
-      return`<div class="${cls}" onclick="bk2GrpTeamClick('${g}','${n.replace(/'/g,"&#39;")}')">
-        ${fi(iso,16,3)}<span class="bk2-mcn">${n}</span>${badge}</div>`;
+      const isP1=n===p1,isP2=n===p2,isWC=wcSet.has(n);
+      const cls='bk2-gteam'+(isP1?' p1':isP2?' p2':isWC?' wc':'');
+      const badge=isP1?'<span class="bk2-gbadge b1">1st</span>':
+                  isP2?'<span class="bk2-gbadge b2">2nd</span>':
+                  isWC?'<span class="bk2-gbadge bwc">3rd</span>':'';
+      const oc=isWC?'':`onclick="bk2GrpTeamClick('${g}','${n.replace(/'/g,"&#39;")}')"`;
+      return`<div class="${cls}" ${oc}>${fi(iso,16,3)}<span class="bk2-mcn">${n}</span>${badge}</div>`;
     }).join('');
     const sl1cls='bk2-gsl s1'+(p1?' filled':'');
     const sl1c=p1?`${fi(TEAMS[p1]?.iso||'',14,3)}<span class="bk2-mcn">${p1}</span><span class="bk2-mcx" onclick="event.stopPropagation();bk2ClearGrp('${g}',1)">✕</span>`
