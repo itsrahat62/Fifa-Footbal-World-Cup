@@ -1898,14 +1898,16 @@ function buildDropdowns(){
 let tvPlayer = null;
 let tvHls = null;
 const tvPresetChannels = [
-  { id: 'tp1', title: 'JioCinema (India VPN)', type: 'iframe', url: 'https://www.jiocinema.com/sports', info: 'Free Live Streaming (Zero Buffer)' },
-  { id: 'tp2', title: 'BBC Sport (UK VPN)', type: 'iframe', url: 'https://www.bbc.co.uk/iplayer/categories/sport/live', info: 'Free Live Broadcasts (Zero Buffer)' },
-  { id: 'tp3', title: 'ITVX Live (UK VPN)', type: 'iframe', url: 'https://www.itv.com/hub/live', info: 'Free live broadcast channels' },
-  { id: 'tp4', title: 'SBS On Demand (Aus VPN)', type: 'iframe', url: 'https://www.sbs.com.au/ondemand/', info: 'Official Australian free matches' },
-  { id: 'tp5', title: 'RTVE Play (Spain VPN)', type: 'iframe', url: 'https://www.rtve.es/play/', info: 'Spain live national stream' },
-  { id: 'tp6', title: 'T-Sports Portal (BD)', type: 'iframe', url: 'https://www.tsports.com/', info: 'Bangladesh local streaming' },
-  { id: 'tp7', title: 'GTV Live (BD)', type: 'iframe', url: 'https://gtvlive.net/', info: 'Bangladesh live TV feed' },
-  { id: 'tp8', title: 'Official HLS Test Stream', type: 'hls', url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8', info: 'Mux adaptive bitrate tester' }
+  { id: 'tp1', title: 'BTV National (BD)', type: 'hls', url: 'https://owrcovcrpy.gpcdn.net/bpk-tv/1709/output/index.m3u8', info: 'Bangladesh Television Live Feed' },
+  { id: 'tp2', title: 'BTV News (BD)', type: 'hls', url: 'https://streams.btvlive.gov.bd/live/37f2df30-3edf-42f3-a2ee-6185002c841c/BD/d96eb7f4-83c2-4472-9597-3568390a8ebf/index.m3u8', info: 'BTV News Channel Live' },
+  { id: 'tp3', title: 'JioCinema (India VPN)', type: 'iframe', url: 'https://www.jiocinema.com/sports', info: 'Free Live Streaming (Zero Buffer)' },
+  { id: 'tp4', title: 'BBC Sport (UK VPN)', type: 'iframe', url: 'https://www.bbc.co.uk/iplayer/categories/sport/live', info: 'Free Live Broadcasts (Zero Buffer)' },
+  { id: 'tp5', title: 'ITVX Live (UK VPN)', type: 'iframe', url: 'https://www.itv.com/hub/live', info: 'Free live broadcast channels' },
+  { id: 'tp6', title: 'SBS On Demand (Aus VPN)', type: 'iframe', url: 'https://www.sbs.com.au/ondemand/', info: 'Official Australian free matches' },
+  { id: 'tp7', title: 'RTVE Play (Spain VPN)', type: 'iframe', url: 'https://www.rtve.es/play/', info: 'Spain live national stream' },
+  { id: 'tp8', title: 'T-Sports Portal (BD)', type: 'iframe', url: 'https://www.tsports.com/', info: 'Bangladesh local streaming' },
+  { id: 'tp9', title: 'GTV Live (BD)', type: 'iframe', url: 'https://gtvlive.net/', info: 'Bangladesh live TV feed' },
+  { id: 'tp10', title: 'Official HLS Test Stream', type: 'hls', url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8', info: 'Mux adaptive bitrate tester' }
 ];
 let tvSavedStreams = [];
 let tvLoadedPlaylist = [];
