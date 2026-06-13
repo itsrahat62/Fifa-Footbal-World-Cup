@@ -307,8 +307,8 @@ select option{background:#0d1a2e;color:#fff}
 .mc-poll-btn:hover{background:var(--glass2);color:var(--t1)}
 
 /* ── GROUPS ── */
-.groups-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px}
-.gc{background:var(--glass);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+.groups-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:14px}
+.gc{background:var(--glass);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}.gc .st-wrap{overflow-x:auto}
 .gc-head{
   padding:12px 16px;display:flex;justify-content:space-between;align-items:center;
   background:linear-gradient(135deg,rgba(255,255,255,0.04),rgba(255,255,255,0.01));
@@ -316,14 +316,14 @@ select option{background:#0d1a2e;color:#fff}
 }
 .gc-title{font-size:14px;font-weight:800;color:var(--gold)}
 .gc-venue{font-size:9px;color:var(--t3);text-align:right;max-width:140px;line-height:1.4}
-.st{width:100%;border-collapse:collapse}
+.st{width:100%;border-collapse:collapse;min-width:290px}
 .st th{
   font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;
-  padding:8px 12px;text-align:center;border-bottom:1px solid var(--border);font-weight:600
+  padding:8px 5px;text-align:center;border-bottom:1px solid var(--border);font-weight:600
 }
-.st th:first-child{text-align:left}
-.st td{padding:10px 12px;font-size:12px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.03)}
-.st td:first-child{text-align:left}
+.st th:first-child{text-align:left;padding-left:12px}
+.st td{padding:9px 5px;font-size:12px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.03)}
+.st td:first-child{text-align:left;padding-left:12px}
 .st tr:last-child td{border:none}
 .st tr:hover td{background:rgba(255,255,255,0.02)}
 .st-team{display:flex;align-items:center;gap:8px}
@@ -1837,7 +1837,7 @@ function renderGroups(){
         <span class="gc-title">GROUP ${g}</span>
         <span class="gc-venue">${info.venue}<br><span style="opacity:.6">${info.city}</span></span>
       </div>
-      <table class="st">
+      <div class="st-wrap"><table class="st">
         <thead><tr><th>Team</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GD</th><th>Pts</th></tr></thead>
         <tbody>
           ${teams.map((t,i)=>{
@@ -1855,7 +1855,7 @@ function renderGroups(){
             </tr>`;
           }).join('')}
         </tbody>
-      </table>
+      </table></div>
       <div class="gc-legend">
         <span class="q-legend"><span class="q-dot q1"></span>Qualify</span>
         <span class="q-legend"><span class="q-dot q2"></span>May qualify</span>
