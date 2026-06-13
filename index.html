@@ -923,12 +923,18 @@ select option{background:#0d1a2e;color:#fff}
   margin-top: 3px;
 }
 .tv-channel-list {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
-  max-height: 250px;
+  max-height: 420px;
   overflow-y: auto;
-  padding-right: 4px;
+  padding-right: 6px;
+}
+.tv-channel-list::-webkit-scrollbar { width: 6px; }
+.tv-channel-list::-webkit-scrollbar-thumb { background: rgba(245,197,24,0.25); border-radius: 10px; }
+.tv-channel-list::-webkit-scrollbar-track { background: transparent; }
+@media (max-width: 600px) {
+  .tv-channel-list { grid-template-columns: 1fr; }
 }
 .tv-cat-tabs {
   display: flex;
@@ -966,6 +972,7 @@ select option{background:#0d1a2e;color:#fff}
 }
 .tv-cat-tab.active .tv-cat-count { background: rgba(245,197,24,0.25); }
 .tv-section-header {
+  grid-column: 1 / -1;
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 1px;
@@ -977,48 +984,98 @@ select option{background:#0d1a2e;color:#fff}
 }
 .tv-section-header:first-child { padding-top: 0; }
 .tv-channel-item {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 10px;
-  background: rgba(255, 255, 255, 0.02);
+  gap: 11px;
+  background: linear-gradient(135deg, rgba(255,255,255,0.035), rgba(255,255,255,0.01));
   border: 1px solid var(--border);
   border-radius: var(--r2);
-  padding: 10px 14px;
+  padding: 10px 14px 10px 13px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: transform .18s ease, border-color .18s ease, background .18s ease, box-shadow .18s ease;
   color: var(--t2);
+  overflow: hidden;
+}
+.tv-channel-item::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: linear-gradient(180deg, var(--gold), #ff8a00);
+  opacity: 0;
+  transition: opacity .18s ease;
 }
 .tv-channel-item:hover {
-  border-color: rgba(245, 197, 24, 0.3);
-  background: rgba(245, 197, 24, 0.04);
+  border-color: rgba(245, 197, 24, 0.35);
+  background: linear-gradient(135deg, rgba(245,197,24,0.08), rgba(245,197,24,0.02));
   color: var(--t1);
+  transform: translateX(2px);
+  box-shadow: 0 4px 18px rgba(0,0,0,0.25);
 }
 .tv-channel-item.active {
-  background: var(--gold3);
-  border-color: rgba(245, 197, 24, 0.35);
+  background: linear-gradient(135deg, rgba(245,197,24,0.16), rgba(245,197,24,0.04));
+  border-color: rgba(245, 197, 24, 0.5);
   color: var(--gold);
+  box-shadow: 0 0 24px rgba(245,197,24,0.12), inset 0 0 0 1px rgba(245,197,24,0.1);
 }
+.tv-channel-item.active::before { opacity: 1; }
 .tv-channel-icon {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
   font-size: 14px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.07);
+  color: var(--t2);
+  transition: all .18s ease;
+}
+.tv-channel-item:hover .tv-channel-icon,
+.tv-channel-item.active .tv-channel-icon {
+  background: linear-gradient(135deg, rgba(245,197,24,0.25), rgba(255,138,0,0.12));
+  border-color: rgba(245,197,24,0.4);
+  color: var(--gold);
 }
 .tv-channel-info {
   display: flex;
   flex-direction: column;
   flex-grow: 1;
+  min-width: 0;
 }
 .tv-ch-name {
-  font-size: 12px;
+  font-size: 12.5px;
   font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .tv-ch-desc {
-  font-size: 9px;
+  font-size: 9.5px;
   color: var(--t3);
-  margin-top: 1px;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .tv-channel-item.active .tv-ch-desc {
   color: var(--gold);
   opacity: 0.7;
 }
+.tv-ch-tag {
+  flex-shrink: 0;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .5px;
+  padding: 3px 7px;
+  border-radius: 20px;
+  text-transform: uppercase;
+}
+.tv-ch-tag.live { background: rgba(46,204,113,0.15); color: #2ecc71; border: 1px solid rgba(46,204,113,0.3); }
+.tv-ch-tag.portal { background: rgba(100,160,255,0.13); color: #6aa0ff; border: 1px solid rgba(100,160,255,0.28); }
 .tv-item-actions {
   display: flex;
   gap: 4px;
@@ -2214,13 +2271,18 @@ const tvPresetChannels = [
   { id: 'sp4',  cat: 'sports', title: '⚽ DD Sports (India)', type: 'hls', url: 'https://d3qs3d2rkhfqrt.cloudfront.net/out/v1/b17adfe543354fdd8d189b110617cddd/index.m3u8', info: 'India public sports broadcast' },
   { id: 'sp5',  cat: 'sports', title: '⚽ ESPN8 The Ocho', type: 'hls', url: 'https://d3b6q2ou5kp8ke.cloudfront.net/ESPNTheOcho.m3u8', info: 'ESPN free sports channel — 1080p' },
   { id: 'sp6',  cat: 'sports', title: '🏏 Cricket Gold', type: 'hls', url: 'https://streams2.sofast.tv/ptnr-yupptv/title-cricketgold/v1/master/611d79b11b77e2f571934fd80ca1413453772ac7/b2048bb8-1686-4432-aa50-647245383e0c/manifest.m3u8', info: 'Classic cricket 24/7' },
-  { id: 'sp7',  cat: 'sports', title: '⚽ CazeTV (Brazil)', type: 'hls', url: 'https://dfr80qz435crc.cloudfront.net/MNOP/Amagi/Caze/Caze_TV_BR/Caze_TV.m3u8', info: 'Brazil football channel' },
+  { id: 'sp7',  cat: 'sports', title: '⚽ CazeTV (Brazil) 1080p', type: 'hls', url: 'https://dfr80qz435crc.cloudfront.net/MNOP/Amagi/Caze/Caze_TV_BR/1080p-vtt/index.m3u8', info: 'Brazil football channel — 1080p HD' },
   { id: 'sp8',  cat: 'sports', title: '📺 FIFA+ Channel (replays)', type: 'hls', url: 'https://a62dad94.wurl.com/master/f36d25e7e52f1ba8d7e56eb859c636563214f541/UmFrdXRlblRWLWV1X0ZJRkFQbHVzRW5nbGlzaF9ITFM/playlist.m3u8', info: 'FIFA shows, classics & docs — NOT the live match feed' },
-  // ── Sports portals (open in new tab if blocked) ──
-  { id: 'sp9',  cat: 'sports', title: '🏆 Sportzfy Portal', type: 'iframe', url: 'https://sportzfytvlive.xyz/', info: 'Free HD multi-link sports streams' },
-  { id: 'sp10', cat: 'sports', title: '🏆 Sportsurge Portal', type: 'iframe', url: 'https://www.sportsurge.net/', info: 'Multi-link free sports portal' },
-  { id: 'sp11', cat: 'sports', title: '🏆 FIFA+ Web Portal', type: 'iframe', url: 'https://www.fifa.com/fifaplus/en/home', info: 'Official FIFA streaming portal' },
-  { id: 'sp12', cat: 'sports', title: '🏆 Toffee (Banglalink)', type: 'iframe', url: 'https://toffee.im/', info: 'All 104 WC matches — Banglalink free' },
+  // ── Live match portals (open in new tab — carry every WC match) ──
+  { id: 'sp9',  cat: 'sports', title: '🔥 Streamed (Every Match)', type: 'iframe', url: 'https://streamed.pk/', info: 'Top aggregator — every live WC match' },
+  { id: 'sp10', cat: 'sports', title: '🔥 DaddyLive HD', type: 'iframe', url: 'https://daddylive.dad/', info: 'beIN / Sky / Fox / ESPN live' },
+  { id: 'sp11', cat: 'sports', title: '🔥 1ball Streams', type: 'iframe', url: 'https://1ball.pk/', info: 'Football-focused live aggregator' },
+  { id: 'sp12', cat: 'sports', title: '🔥 Watch Footy', type: 'iframe', url: 'https://watchfooty.st/', info: 'Dedicated football live streams' },
+  { id: 'sp13', cat: 'sports', title: '🔥 FootStreams', type: 'iframe', url: 'https://www.footstreams.co/', info: 'Football multi-link portal' },
+  { id: 'sp14', cat: 'sports', title: '🏆 Sportsurge Portal', type: 'iframe', url: 'https://v2.sportsurge.net/home5/', info: 'Multi-link free sports portal' },
+  { id: 'sp15', cat: 'sports', title: '🏆 Sportzfy Portal', type: 'iframe', url: 'https://sportzfytvlive.xyz/', info: 'Free HD multi-link sports streams' },
+  { id: 'sp16', cat: 'sports', title: '🏆 FIFA+ Web Portal', type: 'iframe', url: 'https://www.fifa.com/fifaplus/en/home', info: 'Official FIFA streaming portal' },
+  { id: 'sp17', cat: 'sports', title: '🏆 Toffee (Banglalink)', type: 'iframe', url: 'https://toffee.im/', info: 'All 104 WC matches — Banglalink free' },
 
   // ═══════════ 📰 NEWS ═══════════ (BD via gpcdn — all verified playing globally)
   { id: 'nw1',  cat: 'news', title: '📺 Channel 1 (BD)', type: 'hls', url: 'https://owrcovcrpy.gpcdn.net/bpk-tv/1702/output/index.m3u8', info: 'Bangladeshi live channel' },
@@ -2534,12 +2596,16 @@ function renderTVPresets() {
     chans.forEach(ch => {
       const item = document.createElement('div');
       item.className = 'tv-channel-item';
+      const tag = ch.type === 'hls'
+        ? '<span class="tv-ch-tag live">live</span>'
+        : '<span class="tv-ch-tag portal">portal</span>';
       item.innerHTML = `
-        <div class="tv-channel-icon"><i class="fa-solid ${ch.type === 'hls' ? 'fa-bolt' : 'fa-link'}"></i></div>
+        <div class="tv-channel-icon"><i class="fa-solid ${ch.type === 'hls' ? 'fa-tower-broadcast' : 'fa-arrow-up-right-from-square'}"></i></div>
         <div class="tv-channel-info">
           <span class="tv-ch-name">${ch.title}</span>
           <span class="tv-ch-desc">${ch.info}</span>
         </div>
+        ${tag}
       `;
       item.addEventListener('click', () => {
         document.querySelectorAll('.tv-channel-item').forEach(el => el.classList.remove('active'));
