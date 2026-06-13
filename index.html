@@ -2524,43 +2524,62 @@ function playLiveTVStream(type, url, title, key) {
     if (Hls.isSupported()) {
       tvHls = new Hls({
         enableWorker: true,
-        lowLatencyMode: false,
-        // ── Generous forward buffer so hiccups never stall playback ──
-        maxBufferLength: 30,                 // keep ~30s buffered ahead
-        maxMaxBufferLength: 90,              // allow growing up to 90s
-        maxBufferSize: 100 * 1000 * 1000,    // up to 100 MB cached
-        backBufferLength: 30,
-        // ── ABR: lean toward higher quality, use available bandwidth ──
+        lowLatencyMode: false,                 // OFF — LL mode shrinks buffer & causes stalls
+        // ── DEEP forward buffer (maxBufferSize in bytes is the real limiter) ──
+        maxBufferLength: 60,                   // target 60s ahead
+        maxMaxBufferLength: 600,               // allow large growth (byte cap governs)
+        maxBufferSize: 200 * 1000 * 1000,      // 200 MB cached — trade memory for smoothness
+        maxBufferHole: 0.5,                    // tolerate small gaps instead of stalling
+        backBufferLength: Infinity,            // keep back buffer (DVR/seek-back)
+        frontBufferFlushThreshold: Infinity,   // never flush forward buffer
+        // ── Start at high quality, fast ──
         startLevel: -1,
-        abrEwmaDefaultEstimate: 2000000,     // assume 2 Mbps → starts in better quality
-        abrBandWidthFactor: 0.95,
-        abrBandWidthUpFactor: 0.8,
-        abrMaxWithRealBitrate: true,
-        // ── Live tuning: sit a little back from the edge for stability ──
-        liveSyncDurationCount: 3,
-        liveMaxLatencyDurationCount: 12,
+        startFragPrefetch: true,               // prefetch first fragment → faster start
+        testBandwidth: false,                  // skip low-q probe (we start high)
+        abrEwmaDefaultEstimate: 5000000,       // 5 Mbps guess → begins in high quality
+        // ── ABR biased to high quality (keeps auto fallback on real drops) ──
+        abrBandWidthFactor: 1.0,               // use near-full measured bandwidth
+        abrBandWidthUpFactor: 0.9,             // up-switch with a small margin
+        abrEwmaFastLive: 4.0,                  // smooth transient bandwidth dips
+        abrMaxWithRealBitrate: true,           // select by real measured bitrate
+        maxStarvationDelay: 8,                 // tolerate risk, stay high
+        maxLoadingDelay: 8,
+        capLevelToPlayerSize: false,           // don't limit quality to element size
+        capLevelOnFPSDrop: false,
+        autoLevelCapping: -1,                  // no quality ceiling
+        // ── Live edge: sit back, never force a catch-up seek ──
+        liveSyncDurationCount: 6,              // sit further back = more headroom
+        liveMaxLatencyDurationCount: Infinity, // never force a forward seek
         liveDurationInfinity: true,
-        // ── Resilience: aggressive retries + stall recovery ──
-        manifestLoadingMaxRetry: 6,
-        manifestLoadingRetryDelay: 500,
-        levelLoadingMaxRetry: 6,
-        fragLoadingMaxRetry: 8,
-        fragLoadingRetryDelay: 500,
-        nudgeMaxRetry: 12,
-        highBufferWatchdogPeriod: 1
+        // ── Stall / error resilience ──
+        nudgeMaxRetry: 8,
+        highBufferWatchdogPeriod: 2,
+        appendErrorMaxRetry: 5,
+        fragLoadPolicy: { default: {
+          maxTimeToFirstByteMs: 10000, maxLoadTimeMs: 120000,
+          timeoutRetry: { maxNumRetry: 6, retryDelayMs: 0,   maxRetryDelayMs: 0,    backoff: 'linear' },
+          errorRetry:   { maxNumRetry: 8, retryDelayMs: 500, maxRetryDelayMs: 4000, backoff: 'linear' }
+        }},
+        playlistLoadPolicy: { default: {
+          maxTimeToFirstByteMs: 10000, maxLoadTimeMs: 20000,
+          timeoutRetry: { maxNumRetry: 4, retryDelayMs: 0,   maxRetryDelayMs: 0 },
+          errorRetry:   { maxNumRetry: 4, retryDelayMs: 500, maxRetryDelayMs: 4000 }
+        }}
       });
       tvHls.loadSource(url);
       tvHls.attachMedia(video);
       tvHls.on(Hls.Events.MANIFEST_PARSED, () => {
         video.play().catch(e => {});
       });
-      // Auto-recover from fatal errors instead of freezing
+      // Auto-recover from fatal errors instead of freezing (rate-limited to avoid loops)
+      let _lastMediaRecover = 0;
       tvHls.on(Hls.Events.ERROR, (evt, data) => {
-        if (!data.fatal) return;
+        if (!data.fatal) return;             // non-fatal: hls.js retries itself
         if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
           tvHls.startLoad();
         } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
-          tvHls.recoverMediaError();
+          const now = (window.performance && performance.now) ? performance.now() : Date.now();
+          if (now - _lastMediaRecover > 3000) { _lastMediaRecover = now; tvHls.recoverMediaError(); }
         }
       });
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
@@ -2588,20 +2607,24 @@ function playLiveTVStream(type, url, title, key) {
     tvShaka.attach(video).then(() => {
       const cfg = {
         streaming: {
-          bufferingGoal: 30,        // keep 30s buffered ahead → smooth, no stalls
-          rebufferingGoal: 2,
-          bufferBehind: 30,
+          bufferingGoal: 60,         // 60s buffered ahead → smooth, no stalls
+          rebufferingGoal: 3,        // resume with a margin (must be < bufferingGoal)
+          bufferBehind: 60,          // keep back buffer for seek-back
+          segmentPrefetchLimit: 4,   // fetch 4 segments ahead — primary anti-stall
           stallEnabled: true,
           stallThreshold: 1,
           stallSkip: 0.1,
-          jumpLargeGaps: true,
-          retryParameters: { maxAttempts: 6, baseDelay: 500, backoffFactor: 1.5, timeout: 30000 }
+          gapDetectionThreshold: 0.1,// jump tiny gaps quickly
+          retryParameters: {
+            maxAttempts: 6, baseDelay: 300, backoffFactor: 1.5, fuzzFactor: 0.5,
+            timeout: 12000, stallTimeout: 2500, connectionTimeout: 4000
+          }
         },
         abr: {
-          enabled: true,
-          defaultBandwidthEstimate: 3000000,   // start at 3 Mbps → better quality faster
-          bandwidthUpgradeTarget: 0.85,
-          bandwidthDowngradeTarget: 0.95
+          enabled: true,                          // keep adaptivity as a safety net
+          defaultBandwidthEstimate: 100000000,    // 100 Mbps → start at top quality
+          bandwidthUpgradeTarget: 0.50,           // upgrade eagerly
+          bandwidthDowngradeTarget: 0.99          // cling to high quality
         }
       };
       if (kid && ck) cfg.drm = { clearKeys: { [kid]: ck } };
