@@ -2344,42 +2344,6 @@ const tvCategories = [
   { key: 'ent',    label: '🎬 Entertainment' }
 ];
 let tvActiveCat = 'all';
-
-// ── Premium HTTP channels via HTTPS proxy (198.195.239.50) ──
-// Set TV_PROXY to your deployed Cloudflare Worker URL (see cloudflare-worker.js) to enable.
-const TV_PROXY = "";
-const tvProxyRaw = [
-  { cat:'sports', title:'⚡ Star Sports 1 (HD)',        path:'starSports1',         info:'Indian sports — cricket & football' },
-  { cat:'sports', title:'⚡ Star Sports 2 (HD)',        path:'starSports2',         info:'Indian sports network' },
-  { cat:'sports', title:'⚡ Star Sports Select 2 (HD)', path:'starSportsSelect2',   info:'Premium sports events' },
-  { cat:'sports', title:'⚡ Sony Sports 3 (HD)',        path:'sonyTenSports3',      info:'Sony Ten sports network' },
-  { cat:'sports', title:'⚡ Sony Sports 5 (HD)',        path:'sonyTenSports5',      info:'Sony Ten sports network' },
-  { cat:'sports', title:'⚡ TSports (HD)',              path:'tsports',             info:'Bangladesh WC broadcaster' },
-  { cat:'sports', title:'⚡ PTV Sports',                path:'ptv',                 info:'Pakistan sports' },
-  { cat:'ent',    title:'⚡ Star Plus (HD)',            path:'starPlus',            info:'Hindi entertainment' },
-  { cat:'ent',    title:'⚡ Star Movies (HD)',          path:'starMovies',          info:'English movies HD' },
-  { cat:'ent',    title:'⚡ Sony Max (HD)',             path:'sonyMax',             info:'Hindi movies' },
-  { cat:'ent',    title:'⚡ Sony Entertainment (HD)',   path:'sonyEntertainment',   info:'Hindi entertainment' },
-  { cat:'ent',    title:'⚡ Sony Aath',                 path:'sonyAath',            info:'Bangla entertainment' },
-  { cat:'ent',    title:'⚡ Star Jalsha (HD)',          path:'starJalsha',          info:'Bengali entertainment' },
-  { cat:'ent',    title:'⚡ Jalsha Movies (HD)',        path:'jalshaMovies',        info:'Bengali movies' },
-  { cat:'ent',    title:'⚡ Colors Bangla Cinema',      path:'colorsBanglaChinema', info:'Bengali movies' },
-  { cat:'ent',    title:'⚡ Colors (HD)',               path:'colors',              info:'Hindi entertainment' },
-  { cat:'ent',    title:'⚡ Deepto TV',                 path:'deepto',              info:'Bangladesh entertainment' },
-  { cat:'ent',    title:'⚡ Sangeet Bangla',            path:'sangeetBangla',       info:'Bengali music' },
-  { cat:'ent',    title:'⚡ 9XM Music',                 path:'9xm',                 info:'Hindi music videos' },
-  { cat:'ent',    title:'⚡ Discovery (HD)',            path:'discovery',           info:'Documentaries' },
-  { cat:'ent',    title:'⚡ Cartoon Network (HD)',      path:'cartoonNetwork',      info:'Kids cartoons' }
-];
-if (TV_PROXY) {
-  const pbase = TV_PROXY.replace(/\/+$/, '');
-  tvProxyRaw.forEach((c, i) => tvPresetChannels.push({
-    id: 'px' + i, cat: c.cat, type: 'hls', title: c.title,
-    url: pbase + '/?url=' + encodeURIComponent('http://198.195.239.50:8095/' + c.path + '/index.m3u8'),
-    info: c.info
-  }));
-}
-
 let tvSavedStreams = [];
 let tvLoadedPlaylist = [];
 
