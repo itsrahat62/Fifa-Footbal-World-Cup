@@ -1172,8 +1172,18 @@ select option{background:#0d1a2e;color:#fff}
           </div>
 
           <!-- Iframe Container -->
-          <div id="tv-iframe-container" class="tv-hidden">
+          <div id="tv-iframe-container" class="tv-hidden" style="position:relative">
             <iframe id="tv-iframe-player" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+            <a id="tv-iframe-newtab" href="#" target="_blank" rel="noopener" style="
+              position:absolute;bottom:12px;right:12px;z-index:20;
+              background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);
+              color:#fff;font-size:12px;font-weight:600;padding:7px 14px;
+              border-radius:20px;text-decoration:none;border:1px solid rgba(255,255,255,0.2);
+              display:flex;align-items:center;gap:6px;letter-spacing:.3px
+            ">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M19 19H5V5h7V3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/></svg>
+              Open in new tab
+            </a>
           </div>
         </div>
 
@@ -2151,37 +2161,37 @@ let tvPlayer = null;
 let tvHls = null;
 let tvIsHLS = false;
 const tvPresetChannels = [
-  { id: 'tp1', title: 'BTV National (BD)', type: 'hls', url: 'https://owrcovcrpy.gpcdn.net/bpk-tv/1709/output/index.m3u8', info: 'Bangladesh Television Live Feed' },
-  { id: 'tp2', title: 'Somoy TV (BD News)', type: 'hls', url: 'https://owrcovcrpy.gpcdn.net/bpk-tv/1702/output/index.m3u8', info: 'Popular Bangladeshi News stream' },
-  { id: 'tp3', title: 'Channel 24 (BD News)', type: 'hls', url: 'https://owrcovcrpy.gpcdn.net/bpk-tv/1703/output/index.m3u8', info: 'Bangladeshi Live News Channel' },
-  { id: 'tp4', title: 'Jamuna TV (BD News)', type: 'hls', url: 'https://owrcovcrpy.gpcdn.net/bpk-tv/1701/output/index.m3u8', info: 'Bangladeshi 24/7 News Feed' },
-  { id: 'tp5', title: 'Fox Sports HD (Premium)', type: 'hls', url: 'https://d1jzu95oc8fgt3.cloudfront.net/FOX_Sports1080p.m3u8', info: 'High definition live sports' },
-  { id: 'tp6', title: 'DD Sports 2.0 (Premium)', type: 'hls', url: 'https://d3qs3d2rkhfqrt.cloudfront.net/out/v1/b17adfe543354fdd8d189b110617cddd/index.m3u8', info: 'Indian sports direct broadcast feed' },
-  { id: 'tp7', title: 'PTV Sports HD (Premium)', type: 'hls', url: 'http://163.61.227.29:8000/play/a05l/40652310.m3u8', info: 'BDIX Pakistan Sports live feed' },
-  { id: 'tp8', title: 'beIN Sports 1 (Premium)', type: 'hls', url: 'http://103.161.153.165:8000/play/a03z/index.m3u8', info: 'BDIX Arabic sports network stream' },
-  { id: 'tp9',  title: 'LiveKhela Portal (No-VPN)', type: 'iframe', url: 'https://livekhela.tv/', info: 'Live Football / Premium Sports Portal' },
-  { id: 'tp10', title: 'Dudu Live Sports Portal', type: 'iframe', url: 'https://dudu.vcahen.com/', info: 'Multi-Sport live streaming schedule' },
-  { id: 'tp11', title: 'JioCinema (India VPN)', type: 'iframe', url: 'https://www.jiocinema.com/sports', info: 'Free Live Streaming (Zero Buffer)' },
-  { id: 'tp12', title: 'T-Sports Portal (BD)', type: 'iframe', url: 'https://www.tsports.com/', info: 'Bangladesh — WC official broadcaster' },
-  { id: 'tp13', title: 'GTV Live (BD)', type: 'iframe', url: 'https://gtvlive.net/', info: 'Bangladesh live TV feed' },
-  // ── World Cup 2026 Dedicated ──
-  { id: 'tp15', title: '🏆 KickBD — WC Live', type: 'iframe', url: 'https://kickbd.com/', info: 'World Cup live matches & stream links' },
-  { id: 'tp16', title: '🏆 Sportzfy TV Live', type: 'iframe', url: 'https://sportzfytvlive.xyz/', info: 'Free HD sports live streams' },
-  { id: 'tp17', title: '🏆 MovieLinkBD Live TV', type: 'iframe', url: 'https://e4zez3.movielinkbd.li/livetv/', info: 'BD free live TV & sports portal' },
-  { id: 'tp18', title: '⚽ bangla.football (BD)', type: 'iframe', url: 'https://bangla.football/', info: 'Bangladesh dedicated football live stream' },
-  { id: 'tp19', title: '⚽ FIFA+ Official', type: 'iframe', url: 'https://www.fifa.com/fifaplus/en/home', info: 'Official FIFA free streaming — selected matches' },
-  // ── BD Official Streaming ──
-  { id: 'tp20', title: '📺 Toffee (Banglalink BD)', type: 'iframe', url: 'https://toffee.im/', info: 'All 104 matches — Banglalink bundle = FREE' },
-  { id: 'tp21', title: '📺 Bioscope (Grameenphone)', type: 'iframe', url: 'https://bioscope.tv/', info: 'WC streaming — GP users free' },
-  { id: 'tp22', title: '📺 MyRobi (Robi BD)', type: 'iframe', url: 'https://myrobi.com.bd/', info: 'WC live — Robi subscribers free' },
-  { id: 'tp23', title: '📺 iScreen (BD)', type: 'iframe', url: 'https://iscreen.com.bd/', info: 'World Cup live streaming BD' },
-  // ── International Free Broadcasts ──
-  { id: 'tp24', title: '📺 BBC iPlayer (UK VPN)', type: 'iframe', url: 'https://www.bbc.co.uk/iplayer/live/bbcone', info: 'Free on BBC One — UK VPN required' },
-  { id: 'tp25', title: '📺 SBS On Demand (AU)', type: 'iframe', url: 'https://www.sbs.com.au/ondemand/sport', info: 'All 104 matches free in Australia' },
-  { id: 'tp26', title: '📺 TVer Japan (JPN VPN)', type: 'iframe', url: 'https://tver.jp/', info: 'Free WC stream in Japan — VPN needed' },
-  { id: 'tp27', title: '📺 Tubi (USA — FOX Free)', type: 'iframe', url: 'https://tubitv.com/live', info: 'Free USA stream — some WC matches on Tubi' },
-  { id: 'tp28', title: '🏆 StreamSport Portal', type: 'iframe', url: 'https://www.sportsurge.net/', info: 'Multi-link free sports portal' },
-  { id: 'tp14', title: '🔧 HLS Test Stream', type: 'hls', url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8', info: 'Mux adaptive bitrate tester' }
+  // ── BD Live Channels (HLS) ──
+  { id: 'tp1',  title: '📺 BTV National (BD)', type: 'hls', url: 'https://owrcovcrpy.gpcdn.net/bpk-tv/1709/output/index.m3u8', info: 'Bangladesh Television Live Feed' },
+  { id: 'tp2',  title: '📺 Somoy TV (BD)', type: 'hls', url: 'https://owrcovcrpy.gpcdn.net/bpk-tv/1702/output/index.m3u8', info: 'Popular Bangladeshi News stream' },
+  { id: 'tp3',  title: '📺 Channel 24 (BD)', type: 'hls', url: 'https://owrcovcrpy.gpcdn.net/bpk-tv/1703/output/index.m3u8', info: 'Bangladeshi Live News Channel' },
+  { id: 'tp4',  title: '📺 Jamuna TV (BD)', type: 'hls', url: 'https://owrcovcrpy.gpcdn.net/bpk-tv/1701/output/index.m3u8', info: 'Bangladeshi 24/7 News Feed' },
+  // ── World Cup 2026 — Al Kass Qatar (HLS 1080p) ──
+  { id: 'tp5',  title: '🏆 Al Kass 1 — Qatar', type: 'hls', url: 'https://liveeu-gcp.alkassdigital.net/alkass1-p/main.m3u8', info: 'Qatar sports HD — World Cup 2026 live' },
+  { id: 'tp6',  title: '🏆 Al Kass 2 — Qatar', type: 'hls', url: 'https://liveeu-gcp.alkassdigital.net/alkass2-p/main.m3u8', info: 'Qatar sports ch2 — WC live' },
+  { id: 'tp7',  title: '🏆 Al Kass 3 — Qatar', type: 'hls', url: 'https://liveeu-gcp.alkassdigital.net/alkass3-p/main.m3u8', info: 'Qatar sports ch3 — WC live' },
+  { id: 'tp8',  title: '🏆 Al Kass 4 — Qatar', type: 'hls', url: 'https://liveeu-gcp.alkassdigital.net/alkass4-p/main.m3u8', info: 'Qatar sports ch4 — WC live' },
+  // ── Free Sports HLS Streams ──
+  { id: 'tp9',  title: '⚽ FIFA+ Free (HLS)', type: 'hls', url: 'https://jmp2.uk/plu-660c29b5aec9680008f5b4a4.m3u8', info: 'FIFA official free channel — WC content' },
+  { id: 'tp10', title: '⚽ beIN XTRA Free', type: 'hls', url: 'https://bein-xtra-bein.amagi.tv/playlist.m3u8', info: 'beIN Sports free tier — 1080p HD' },
+  { id: 'tp11', title: '⚽ ESPN8 The Ocho', type: 'hls', url: 'https://d3b6q2ou5kp8ke.cloudfront.net/ESPNTheOcho.m3u8', info: 'ESPN free sports channel — 1080p' },
+  { id: 'tp12', title: '⚽ CCTV-5 Sports', type: 'hls', url: 'https://node1.olelive.com:6443/live/CCTV5HD/hls.m3u8', info: 'China Central TV Sports HD' },
+  { id: 'tp13', title: '⚽ CCTV-5+ Events', type: 'hls', url: 'https://node1.olelive.com:6443/live/CCTV5PHD/hls.m3u8', info: 'China Sports Events HD' },
+  { id: 'tp14', title: '⚽ Esport3 (Catalunya)', type: 'hls', url: 'https://directes-tv-int.3catdirectes.cat/live-content/esport3-hls/master.m3u8', info: 'Catalan public sports — 1080p' },
+  { id: 'tp15', title: '⚽ ORF Sport+ (Austria)', type: 'hls', url: 'https://orfs.mdn.ors.at/out/u/orfs/q8c/manifest.m3u8', info: 'Austrian public sports broadcast' },
+  { id: 'tp16', title: '⚽ CBC Sport (Azerbaijan)', type: 'hls', url: 'https://mn-nl.mncdn.com/cbcsports_live/cbcsports/playlist.m3u8', info: 'Azerbaijan state sports channel' },
+  { id: 'tp17', title: '⚽ Africa 24 Sport', type: 'hls', url: 'https://africa24.vedge.infomaniak.com/livecast/ik:africa24sport/manifest.m3u8', info: 'Africa 24 sports news — 1080p' },
+  { id: 'tp18', title: '⚽ Bahrain Sports 1', type: 'hls', url: 'https://5c7b683162943.streamlock.net/live/ngrp:sportsone_all/playlist.m3u8', info: 'Bahrain National Sports Channel 1' },
+  { id: 'tp19', title: '⚽ Bahrain Sports 2', type: 'hls', url: 'https://5c7b683162943.streamlock.net/live/ngrp:bahrainsportstwo_all/playlist.m3u8', info: 'Bahrain National Sports Channel 2' },
+  // ── BD Streaming Apps (iframe — open site if blocked) ──
+  { id: 'tp20', title: '📺 T-Sports BD', type: 'iframe', url: 'https://www.tsports.com/', info: 'Bangladesh official WC broadcaster' },
+  { id: 'tp21', title: '📺 GTV Live (BD)', type: 'iframe', url: 'https://gtvlive.net/', info: 'Gazi TV Bangladesh live' },
+  { id: 'tp22', title: '📺 Toffee (Banglalink)', type: 'iframe', url: 'https://toffee.im/', info: 'All 104 WC matches — Banglalink free' },
+  { id: 'tp23', title: '📺 Bioscope (GP)', type: 'iframe', url: 'https://bioscope.tv/', info: 'WC streaming — Grameenphone free' },
+  { id: 'tp24', title: '🏆 Sportzfy Portal', type: 'iframe', url: 'https://sportzfytvlive.xyz/', info: 'Free HD multi-link sports streams' },
+  { id: 'tp25', title: '🏆 Sportsurge Portal', type: 'iframe', url: 'https://www.sportsurge.net/', info: 'Multi-link free sports portal' },
+  { id: 'tp26', title: '⚽ FIFA+ Official', type: 'iframe', url: 'https://www.fifa.com/fifaplus/en/home', info: 'Official FIFA free streaming portal' },
+  { id: 'tp27', title: '🔧 HLS Test Stream', type: 'hls', url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8', info: 'Mux adaptive bitrate tester' }
 ];
 let tvSavedStreams = [];
 let tvLoadedPlaylist = [];
@@ -2393,8 +2403,10 @@ function playLiveTVStream(type, url, title) {
     }
 
     // Sandbox to block advertising popups and redirections
-    iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-presentation allow-forms');
+    iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-presentation allow-forms allow-popups');
     iframe.src = finalUrl;
+    const newTabBtn = document.getElementById('tv-iframe-newtab');
+    if (newTabBtn) newTabBtn.href = finalUrl;
   }
   else if (type === 'mp4') {
     plyrContainer.classList.remove('tv-hidden');
