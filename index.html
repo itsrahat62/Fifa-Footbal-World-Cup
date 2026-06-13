@@ -2522,11 +2522,46 @@ function playLiveTVStream(type, url, title, key) {
     iframe.src = '';
 
     if (Hls.isSupported()) {
-      tvHls = new Hls({ maxMaxBufferLength: 10, enableWorker: true });
+      tvHls = new Hls({
+        enableWorker: true,
+        lowLatencyMode: false,
+        // ── Generous forward buffer so hiccups never stall playback ──
+        maxBufferLength: 30,                 // keep ~30s buffered ahead
+        maxMaxBufferLength: 90,              // allow growing up to 90s
+        maxBufferSize: 100 * 1000 * 1000,    // up to 100 MB cached
+        backBufferLength: 30,
+        // ── ABR: lean toward higher quality, use available bandwidth ──
+        startLevel: -1,
+        abrEwmaDefaultEstimate: 2000000,     // assume 2 Mbps → starts in better quality
+        abrBandWidthFactor: 0.95,
+        abrBandWidthUpFactor: 0.8,
+        abrMaxWithRealBitrate: true,
+        // ── Live tuning: sit a little back from the edge for stability ──
+        liveSyncDurationCount: 3,
+        liveMaxLatencyDurationCount: 12,
+        liveDurationInfinity: true,
+        // ── Resilience: aggressive retries + stall recovery ──
+        manifestLoadingMaxRetry: 6,
+        manifestLoadingRetryDelay: 500,
+        levelLoadingMaxRetry: 6,
+        fragLoadingMaxRetry: 8,
+        fragLoadingRetryDelay: 500,
+        nudgeMaxRetry: 12,
+        highBufferWatchdogPeriod: 1
+      });
       tvHls.loadSource(url);
       tvHls.attachMedia(video);
       tvHls.on(Hls.Events.MANIFEST_PARSED, () => {
         video.play().catch(e => {});
+      });
+      // Auto-recover from fatal errors instead of freezing
+      tvHls.on(Hls.Events.ERROR, (evt, data) => {
+        if (!data.fatal) return;
+        if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+          tvHls.startLoad();
+        } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+          tvHls.recoverMediaError();
+        }
       });
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
       video.src = url;
@@ -2551,9 +2586,33 @@ function playLiveTVStream(type, url, title, key) {
     try { shaka.polyfill.installAll(); } catch(e) {}
     tvShaka = new shaka.Player();
     tvShaka.attach(video).then(() => {
-      const cfg = { streaming: { bufferingGoal: 8, rebufferingGoal: 3 } };
+      const cfg = {
+        streaming: {
+          bufferingGoal: 30,        // keep 30s buffered ahead → smooth, no stalls
+          rebufferingGoal: 2,
+          bufferBehind: 30,
+          stallEnabled: true,
+          stallThreshold: 1,
+          stallSkip: 0.1,
+          jumpLargeGaps: true,
+          retryParameters: { maxAttempts: 6, baseDelay: 500, backoffFactor: 1.5, timeout: 30000 }
+        },
+        abr: {
+          enabled: true,
+          defaultBandwidthEstimate: 3000000,   // start at 3 Mbps → better quality faster
+          bandwidthUpgradeTarget: 0.85,
+          bandwidthDowngradeTarget: 0.95
+        }
+      };
       if (kid && ck) cfg.drm = { clearKeys: { [kid]: ck } };
       tvShaka.configure(cfg);
+      // Auto-retry on recoverable streaming errors instead of freezing
+      tvShaka.addEventListener('error', (e) => {
+        const code = e.detail && e.detail.code;
+        if (code === 1001 || code === 1002 || code === 1003 || (code >= 3000 && code < 4000)) {
+          setTimeout(() => { try { tvShaka.load(url).then(()=>video.play().catch(()=>{})); } catch(_){} }, 1500);
+        }
+      });
       tvShaka.load(url).then(() => { video.play().catch(e => {}); })
         .catch(err => { console.warn('Shaka load error', err); });
     });
