@@ -333,6 +333,10 @@ select option{background:#0d1a2e;color:#fff}
 .q2{background:var(--gold)}
 .q3{background:var(--t3)}
 .st-pts{font-weight:800;color:var(--gold)}
+.st-pts-live{color:#2ecc71!important;animation:ptsGlow 2s ease-in-out infinite;}
+@keyframes ptsGlow{0%,100%{text-shadow:none}50%{text-shadow:0 0 8px rgba(46,204,113,0.6);}}
+.st-row-active td{background:rgba(255,255,255,0.015);}
+.st-row-active:hover td{background:rgba(255,255,255,0.03)!important;}
 .gc-legend{
   padding:8px 14px;font-size:9px;color:var(--t3);
   border-top:1px solid var(--border);display:flex;gap:14px;align-items:center
@@ -1797,12 +1801,37 @@ function renderLive(){
 }
 
 // ══════════ GROUPS ════════════════════════════════════════
+
+function calcGroupStandings(g){
+  const teams={};
+  Object.entries(TEAMS).filter(([,t])=>t.group===g).forEach(([name,d])=>{
+    teams[name]={name,...d,p:0,w:0,dr:0,l:0,gf:0,ga:0,gd:0,pts:0};
+  });
+  // Process matches that have scores
+  MATCHES.filter(m=>m.stage===`Group ${g}`&&m.hs!==undefined&&m.as!==undefined).forEach(m=>{
+    const h=teams[m.home],a=teams[m.away];
+    if(!h||!a)return;
+    h.p++;a.p++;
+    h.gf+=m.hs;h.ga+=m.as;
+    a.gf+=m.as;a.ga+=m.hs;
+    h.gd=h.gf-h.ga;a.gd=a.gf-a.ga;
+    if(m.hs>m.as){h.w++;h.pts+=3;a.l++;}
+    else if(m.hs<m.as){a.w++;a.pts+=3;h.l++;}
+    else{h.dr++;h.pts++;a.dr++;a.pts++;}
+  });
+  // Sort: Pts → GD → GF → name
+  return Object.values(teams).sort((a,b)=>
+    b.pts-a.pts||b.gd-a.gd||b.gf-a.gf||a.name.localeCompare(b.name)
+  );
+}
+
 function renderGroups(){
   let html='';
   'ABCDEFGHIJKL'.split('').forEach(g=>{
     const info=GV[g];
-    const teams=Object.entries(TEAMS).filter(([,t])=>t.group===g)
-      .map(([name,d])=>({name,...d,p:0,w:0,dr:0,l:0,gf:0,ga:0,gd:0,pts:0}));
+    const teams=calcGroupStandings(g);
+    const played=MATCHES.filter(m=>m.stage===`Group ${g}`&&m.hs!==undefined&&m.as!==undefined).length;
+    const total=MATCHES.filter(m=>m.stage===`Group ${g}`).length;
     html+=`<div class="gc">
       <div class="gc-head">
         <span class="gc-title">GROUP ${g}</span>
@@ -1811,22 +1840,26 @@ function renderGroups(){
       <table class="st">
         <thead><tr><th>Team</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GD</th><th>Pts</th></tr></thead>
         <tbody>
-          ${teams.map((t,i)=>`<tr>
-            <td><div class="st-team">
-              <span class="q-dot ${i===0?'q1':i===1?'q2':'q3'}"></span>
-              <span class="st-flag">${fi(t.iso,22,3)}</span>
-              <span style="font-weight:600">${t.name}</span>
-            </div></td>
-            <td>${t.p}</td><td>${t.w}</td><td>${t.dr}</td><td>${t.l}</td>
-            <td>${t.gd>=0?'+':''}${t.gd}</td>
-            <td class="st-pts">${t.pts}</td>
-          </tr>`).join('')}
+          ${teams.map((t,i)=>{
+            const dot=i===0?'q1':i===1?'q2':'q3';
+            const changed=t.p>0;
+            return`<tr${changed?' class="st-row-active"':''}>
+              <td><div class="st-team">
+                <span class="q-dot ${dot}"></span>
+                <span class="st-flag">${fi(t.iso,22,3)}</span>
+                <span style="font-weight:600">${t.name}</span>
+              </div></td>
+              <td>${t.p}</td><td>${t.w}</td><td>${t.dr}</td><td>${t.l}</td>
+              <td>${t.gd>0?'+':''}${t.gd}</td>
+              <td class="st-pts${t.pts>0?' st-pts-live':''}">${t.pts}</td>
+            </tr>`;
+          }).join('')}
         </tbody>
       </table>
       <div class="gc-legend">
         <span class="q-legend"><span class="q-dot q1"></span>Qualify</span>
         <span class="q-legend"><span class="q-dot q2"></span>May qualify</span>
-        <span style="margin-left:auto;font-size:9px">${MATCHES.filter(m=>m.stage===`Group ${g}`).length} matches</span>
+        <span style="margin-left:auto;font-size:9px;color:var(--t3)">${played}/${total} played</span>
       </div>
     </div>`;
   });
@@ -2520,6 +2553,8 @@ function renderTVPlaylistChannels(channels) {
   setInterval(()=>{updateClock();updateCD();},1000);
   // Auto-refresh fixtures every 60s to move finished matches to previous section
   setInterval(()=>{ if(curTab==='fixtures') renderFixtures(); },60000);
+  // Auto-refresh group standings every 60s
+  setInterval(()=>{ if(curTab==='groups') renderGroups(); },60000);
   document.getElementById('pollModal').addEventListener('click',e=>{if(e.target===e.currentTarget)closePoll();});
   document.getElementById('bkPickerModal').addEventListener('click',e=>{if(e.target===e.currentTarget)bkClosePicker();});
   document.getElementById('todayMatchModal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeTodayMatches();});
