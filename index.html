@@ -661,6 +661,21 @@ select option{background:#0d1a2e;color:#fff}
 :root {
   --plyr-color-main: var(--gold);
   --plyr-video-background: #000;
+  --plyr-video-controls-background: linear-gradient(rgba(0,0,0,0) 0%, rgba(0,0,0,0.88) 100%);
+  --plyr-control-icon-size: 18px;
+  --plyr-range-fill-background: var(--gold);
+  --plyr-range-thumb-background: #fff;
+  --plyr-range-thumb-height: 14px;
+  --plyr-range-thumb-width: 14px;
+  --plyr-range-thumb-shadow: 0 0 0 3px rgba(255,215,0,0.25), 0 1px 3px rgba(0,0,0,0.5);
+  --plyr-video-control-background-hover: rgba(255,215,0,0.18);
+  --plyr-font-size-time: 13px;
+  --plyr-control-radius: 7px;
+  --plyr-tooltip-background: rgba(10,10,20,0.92);
+  --plyr-tooltip-color: #fff;
+  --plyr-tooltip-padding: 4px 9px;
+  --plyr-tooltip-arrow-size: 4px;
+  --plyr-tooltip-radius: 5px;
 }
 .tv-grid {
   display: grid;
@@ -684,8 +699,12 @@ select option{background:#0d1a2e;color:#fff}
   background: #000;
   border-radius: var(--r);
   overflow: hidden;
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow);
+  border: 1px solid rgba(255,215,0,0.12);
+  box-shadow: 0 24px 64px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.05), 0 0 50px rgba(255,215,0,0.05);
+  transition: box-shadow 0.3s ease;
+}
+.tv-player-wrapper:hover {
+  box-shadow: 0 28px 72px rgba(0,0,0,0.85), 0 0 0 1px rgba(255,215,0,0.15), 0 0 70px rgba(255,215,0,0.08);
 }
 .tv-info-overlay {
   position: absolute;
@@ -695,11 +714,13 @@ select option{background:#0d1a2e;color:#fff}
   display: flex;
   align-items: center;
   gap: 8px;
-  pointer-events: none;
+  pointer-events: auto;
 }
 .tv-badge {
   background: var(--red);
   color: #fff;
+  border: none;
+  cursor: pointer;
   padding: 4px 10px;
   border-radius: 20px;
   font-size: 10px;
@@ -708,7 +729,64 @@ select option{background:#0d1a2e;color:#fff}
   display: flex;
   align-items: center;
   gap: 5px;
-  box-shadow: 0 4px 12px rgba(255, 77, 109, 0.3);
+  animation: livePulse 2.2s ease-in-out infinite;
+  transition: background 0.25s ease, transform 0.1s ease;
+}
+.tv-badge:hover { transform: scale(1.06); }
+.tv-badge:active { transform: scale(0.95); }
+.tv-badge.tv-badge-behind {
+  background: #e67e22;
+  animation: none;
+  box-shadow: 0 4px 14px rgba(230,126,34,0.5);
+}
+.tv-badge.tv-badge-behind:hover {
+  background: #d35400;
+  box-shadow: 0 4px 20px rgba(230,126,34,0.75);
+}
+@keyframes livePulse {
+  0%,100% { box-shadow: 0 4px 12px rgba(255,77,109,0.3); }
+  50%      { box-shadow: 0 4px 22px rgba(255,77,109,0.65); }
+}
+/* Custom PiP overlay button */
+.tv-pip-overlay-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 10;
+  width: 34px;
+  height: 34px;
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 8px;
+  color: rgba(255,255,255,0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s ease, background 0.2s ease, color 0.2s ease, transform 0.1s ease;
+  pointer-events: none;
+}
+.tv-pip-overlay-btn svg { width: 17px; height: 17px; pointer-events: none; }
+.tv-player-wrapper:hover .tv-pip-overlay-btn {
+  opacity: 1;
+  pointer-events: auto;
+}
+.tv-pip-overlay-btn:hover {
+  background: rgba(255,215,0,0.25);
+  color: #ffd700;
+  border-color: rgba(255,215,0,0.5);
+  transform: scale(1.1);
+}
+.tv-pip-overlay-btn:active { transform: scale(0.92); }
+.tv-pip-overlay-btn.active {
+  color: #ffd700;
+  border-color: rgba(255,215,0,0.6);
+  background: rgba(255,215,0,0.15);
+  opacity: 1;
+  pointer-events: auto;
 }
 .tv-pulse-dot {
   width: 6px;
@@ -733,6 +811,38 @@ select option{background:#0d1a2e;color:#fff}
 }
 .plyr {
   height: 100% !important;
+}
+.plyr--video .plyr__controls {
+  padding: 6px 14px 14px;
+  background: linear-gradient(transparent, rgba(0,0,0,0.88));
+}
+.plyr__progress input[type=range]::-webkit-slider-runnable-track {
+  height: 4px; border-radius: 10px; transition: height 0.15s ease;
+}
+.plyr__controls:hover .plyr__progress input[type=range]::-webkit-slider-runnable-track { height: 6px; }
+.plyr__progress input[type=range]::-webkit-slider-thumb {
+  box-shadow: 0 0 10px rgba(255,215,0,0.7) !important;
+  transition: transform 0.15s ease;
+}
+.plyr__progress input[type=range]:hover::-webkit-slider-thumb { transform: scale(1.3); }
+.plyr__control.plyr__tab-focus, .plyr__control:hover {
+  border-radius: 8px !important;
+  transition: background 0.15s ease, transform 0.1s ease !important;
+}
+.plyr__control:active { transform: scale(0.92) !important; }
+.plyr--video .plyr__control--overlaid {
+  background: rgba(255,255,255,0.12) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border: 2px solid rgba(255,255,255,0.2) !important;
+  box-shadow: 0 0 30px rgba(255,215,0,0.3) !important;
+  transition: all 0.2s ease !important;
+}
+.plyr--video .plyr__control--overlaid:hover {
+  background: rgba(255,215,0,0.3) !important;
+  border-color: rgba(255,215,0,0.6) !important;
+  box-shadow: 0 0 50px rgba(255,215,0,0.55) !important;
+  transform: scale(1.1) !important;
 }
 #tv-iframe-player {
   width: 100%;
@@ -1024,15 +1134,20 @@ select option{background:#0d1a2e;color:#fff}
       <div class="tv-player-col">
         <div class="tv-player-wrapper">
           <div class="tv-info-overlay">
-            <span class="tv-badge"><span class="tv-pulse-dot"></span> LIVE</span>
+            <button class="tv-badge" id="tvLiveBadge" title="Click to go to live edge"><span class="tv-pulse-dot"></span> LIVE</button>
             <span class="tv-channel-title" id="tv-playing-title">Official HLS Test Stream</span>
           </div>
-          
+
+          <!-- Custom PiP button (top-right) -->
+          <button class="tv-pip-overlay-btn" id="tvPipBtn" title="Picture in Picture">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 11h-8v6h8v-6zm4 8V4.98C23 3.88 22.1 3 21 3H3c-1.1 0-2 .88-2 1.98V19c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2zm-2 .02H3V4.97h18v14.05z"/></svg>
+          </button>
+
           <!-- Plyr Player Container -->
           <div id="tv-plyr-container">
             <video id="tv-player" playsinline controls crossorigin="anonymous" poster="https://images.unsplash.com/photo-1508098682722-e99c43a406b2?q=80&w=1200&auto=format&fit=crop"></video>
           </div>
-          
+
           <!-- Iframe Container -->
           <div id="tv-iframe-container" class="tv-hidden">
             <iframe id="tv-iframe-player" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
@@ -1897,6 +2012,7 @@ function buildDropdowns(){
 // ══════════ LIVE TV PLAYER JS INTEGRATION ══════════════════
 let tvPlayer = null;
 let tvHls = null;
+let tvIsHLS = false;
 const tvPresetChannels = [
   { id: 'tp1', title: 'BTV National (BD)', type: 'hls', url: 'https://owrcovcrpy.gpcdn.net/bpk-tv/1709/output/index.m3u8', info: 'Bangladesh Television Live Feed' },
   { id: 'tp2', title: 'Somoy TV (BD News)', type: 'hls', url: 'https://owrcovcrpy.gpcdn.net/bpk-tv/1702/output/index.m3u8', info: 'Popular Bangladeshi News stream' },
@@ -1920,8 +2036,88 @@ function initLiveTV() {
   // Initialize Plyr
   tvPlayer = new Plyr('#tv-player', {
     controls: ['play-large', 'play', 'progress', 'current-time', 'duration', 'mute', 'volume', 'fullscreen'],
-    settings: ['quality', 'speed', 'loop']
+    settings: ['quality', 'speed', 'loop'],
+    fullscreen: { enabled: true, fallback: true, iosNative: true },
+    tooltips: { controls: true, seek: true },
+    invertTime: false
   });
+
+  const tvVideoEl = document.getElementById('tv-player');
+
+  // ── Landscape lock via native fullscreenchange (works on all browsers) ──
+  function onFSChange() {
+    const isFS = !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement);
+    if (isFS) {
+      if (screen.orientation && screen.orientation.lock) {
+        screen.orientation.lock('landscape').catch(() => {});
+      } else if (screen.lockOrientation) {
+        screen.lockOrientation('landscape-primary');
+      } else if (screen.mozLockOrientation) {
+        screen.mozLockOrientation('landscape-primary');
+      }
+    } else {
+      try {
+        if (screen.orientation && screen.orientation.unlock) screen.orientation.unlock();
+        else if (screen.unlockOrientation) screen.unlockOrientation();
+      } catch(e) {}
+    }
+  }
+  document.addEventListener('fullscreenchange',       onFSChange);
+  document.addEventListener('webkitfullscreenchange', onFSChange);
+  document.addEventListener('mozfullscreenchange',    onFSChange);
+
+  // ── Custom PiP button ──
+  const tvPipBtn = document.getElementById('tvPipBtn');
+  if (tvPipBtn) {
+    if (!document.pictureInPictureEnabled) tvPipBtn.style.display = 'none';
+    tvPipBtn.addEventListener('click', async () => {
+      try {
+        if (document.pictureInPictureElement) {
+          await document.exitPictureInPicture();
+          tvPipBtn.classList.remove('active');
+        } else {
+          await tvVideoEl.requestPictureInPicture();
+          tvPipBtn.classList.add('active');
+        }
+      } catch(e) {}
+    });
+    tvVideoEl.addEventListener('leavepictureinpicture', () => tvPipBtn.classList.remove('active'));
+  }
+
+  // ── LIVE button: seek to live edge when behind ──
+  const tvLiveBadge = document.getElementById('tvLiveBadge');
+
+  function updateLiveBadge() {
+    if (!tvLiveBadge || !tvIsHLS) return;
+    const seekable = tvVideoEl.seekable;
+    if (!seekable || seekable.length === 0) return;
+    const liveEdge = seekable.end(seekable.length - 1);
+    const behind = liveEdge - tvVideoEl.currentTime;
+    if (behind > 25) {
+      tvLiveBadge.classList.add('tv-badge-behind');
+      tvLiveBadge.innerHTML = '▶ GO LIVE';
+    } else {
+      tvLiveBadge.classList.remove('tv-badge-behind');
+      tvLiveBadge.innerHTML = '<span class="tv-pulse-dot"></span> LIVE';
+    }
+  }
+
+  if (tvLiveBadge) {
+    tvLiveBadge.addEventListener('click', () => {
+      if (!tvIsHLS) return;
+      const seekable = tvVideoEl.seekable;
+      if (seekable && seekable.length > 0) {
+        tvVideoEl.currentTime = seekable.end(seekable.length - 1);
+      }
+      tvVideoEl.play().catch(() => {});
+      tvLiveBadge.classList.remove('tv-badge-behind');
+      tvLiveBadge.innerHTML = '<span class="tv-pulse-dot"></span> LIVE';
+    });
+  }
+
+  setInterval(updateLiveBadge, 4000);
+  tvVideoEl.addEventListener('seeking', updateLiveBadge);
+  tvVideoEl.addEventListener('pause',   updateLiveBadge);
 
   // Load saved streams from storage
   const saved = localStorage.getItem('wc2026_saved_tv_streams');
@@ -2000,6 +2196,17 @@ function playLiveTVStream(type, url, title) {
   }
   url = url.trim();
 
+  // Update LIVE badge & PiP visibility based on stream type
+  tvIsHLS = (type === 'hls' || type === 'mp4');
+  const liveBadge = document.getElementById('tvLiveBadge');
+  const pipBtn2   = document.getElementById('tvPipBtn');
+  if (liveBadge) {
+    liveBadge.classList.remove('tv-badge-behind');
+    liveBadge.innerHTML = '<span class="tv-pulse-dot"></span> LIVE';
+    liveBadge.style.display = (type === 'iframe') ? 'none' : '';
+  }
+  if (pipBtn2) pipBtn2.style.display = (type === 'iframe') ? 'none' : '';
+
   if (type === 'hls') {
     plyrContainer.classList.remove('tv-hidden');
     iframeContainer.classList.add('tv-hidden');
@@ -2020,21 +2227,21 @@ function playLiveTVStream(type, url, title) {
     } else {
       alert("HLS is not supported in your browser.");
     }
-  } 
+  }
   else if (type === 'iframe') {
     plyrContainer.classList.add('tv-hidden');
     iframeContainer.classList.remove('tv-hidden');
-    
+
     let finalUrl = url;
     if (url.toLowerCase().includes('<iframe')) {
       const match = url.match(/src=["']([^"']+)["']/i);
       if (match && match[1]) finalUrl = match[1];
     }
-    
+
     // Sandbox to block advertising popups and redirections
     iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-presentation allow-forms');
     iframe.src = finalUrl;
-  } 
+  }
   else if (type === 'mp4') {
     plyrContainer.classList.remove('tv-hidden');
     iframeContainer.classList.add('tv-hidden');
