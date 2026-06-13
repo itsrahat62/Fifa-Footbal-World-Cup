@@ -1899,18 +1899,19 @@ let tvPlayer = null;
 let tvHls = null;
 const tvPresetChannels = [
   { id: 'tp1', title: 'BTV National (BD)', type: 'hls', url: 'https://owrcovcrpy.gpcdn.net/bpk-tv/1709/output/index.m3u8', info: 'Bangladesh Television Live Feed' },
-  { id: 'tp2', title: 'BTV News (BD)', type: 'hls', url: 'https://streams.btvlive.gov.bd/live/37f2df30-3edf-42f3-a2ee-6185002c841c/BD/d96eb7f4-83c2-4472-9597-3568390a8ebf/index.m3u8', info: 'BTV News Channel Live' },
-  { id: 'tp3', title: 'Fox Sports HD (Premium)', type: 'hls', url: 'https://d1jzu95oc8fgt3.cloudfront.net/FOX_Sports1080p.m3u8', info: 'High definition live sports' },
-  { id: 'tp4', title: 'PTV Sports HD (Premium)', type: 'hls', url: 'https://tvsen5.aynaott.com/PtvSports/tracks-v1a1/mono.ts.m3u8', info: 'Pakistan Sports HD Live stream' },
-  { id: 'tp5', title: 'beIN Sports 1 MAX (Premium)', type: 'hls', url: 'https://cdn.yallashooot.pp.ua/hls/ch1.m3u8', info: 'Arabic sports live network' },
-  { id: 'tp6', title: 'JioCinema (India VPN)', type: 'iframe', url: 'https://www.jiocinema.com/sports', info: 'Free Live Streaming (Zero Buffer)' },
-  { id: 'tp7', title: 'BBC Sport (UK VPN)', type: 'iframe', url: 'https://www.bbc.co.uk/iplayer/categories/sport/live', info: 'Free Live Broadcasts (Zero Buffer)' },
-  { id: 'tp8', title: 'ITVX Live (UK VPN)', type: 'iframe', url: 'https://www.itv.com/hub/live', info: 'Free live broadcast channels' },
-  { id: 'tp9', title: 'SBS On Demand (Aus VPN)', type: 'iframe', url: 'https://www.sbs.com.au/ondemand/', info: 'Official Australian free matches' },
-  { id: 'tp10', title: 'RTVE Play (Spain VPN)', type: 'iframe', url: 'https://www.rtve.es/play/', info: 'Spain live national stream' },
-  { id: 'tp11', title: 'T-Sports Portal (BD)', type: 'iframe', url: 'https://www.tsports.com/', info: 'Bangladesh local streaming' },
-  { id: 'tp12', title: 'GTV Live (BD)', type: 'iframe', url: 'https://gtvlive.net/', info: 'Bangladesh live TV feed' },
-  { id: 'tp13', title: 'Official HLS Test Stream', type: 'hls', url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8', info: 'Mux adaptive bitrate tester' }
+  { id: 'tp2', title: 'Somoy TV (BD News)', type: 'hls', url: 'https://owrcovcrpy.gpcdn.net/bpk-tv/1702/output/index.m3u8', info: 'Popular Bangladeshi News stream' },
+  { id: 'tp3', title: 'Channel 24 (BD News)', type: 'hls', url: 'https://owrcovcrpy.gpcdn.net/bpk-tv/1703/output/index.m3u8', info: 'Bangladeshi Live News Channel' },
+  { id: 'tp4', title: 'Jamuna TV (BD News)', type: 'hls', url: 'https://owrcovcrpy.gpcdn.net/bpk-tv/1701/output/index.m3u8', info: 'Bangladeshi 24/7 News Feed' },
+  { id: 'tp5', title: 'Fox Sports HD (Premium)', type: 'hls', url: 'https://d1jzu95oc8fgt3.cloudfront.net/FOX_Sports1080p.m3u8', info: 'High definition live sports' },
+  { id: 'tp6', title: 'DD Sports 2.0 (Premium)', type: 'hls', url: 'https://d3qs3d2rkhfqrt.cloudfront.net/out/v1/b17adfe543354fdd8d189b110617cddd/index.m3u8', info: 'Indian sports direct broadcast feed' },
+  { id: 'tp7', title: 'PTV Sports HD (Premium)', type: 'hls', url: 'http://163.61.227.29:8000/play/a05l/40652310.m3u8', info: 'BDIX Pakistan Sports live feed' },
+  { id: 'tp8', title: 'beIN Sports 1 (Premium)', type: 'hls', url: 'http://103.161.153.165:8000/play/a03z/index.m3u8', info: 'BDIX Arabic sports network stream' },
+  { id: 'tp9', title: 'LiveKhela Portal (No-VPN)', type: 'iframe', url: 'https://livekhela.tv/', info: 'Live Football / Premium Sports Portal' },
+  { id: 'tp10', title: 'Dudu Live Sports Portal', type: 'iframe', url: 'https://dudu.vcahen.com/', info: 'Multi-Sport live streaming schedule' },
+  { id: 'tp11', title: 'JioCinema (India VPN)', type: 'iframe', url: 'https://www.jiocinema.com/sports', info: 'Free Live Streaming (Zero Buffer)' },
+  { id: 'tp12', title: 'T-Sports Portal (BD)', type: 'iframe', url: 'https://www.tsports.com/', info: 'Bangladesh local streaming' },
+  { id: 'tp13', title: 'GTV Live (BD)', type: 'iframe', url: 'https://gtvlive.net/', info: 'Bangladesh live TV feed' },
+  { id: 'tp14', title: 'Official HLS Test Stream', type: 'hls', url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8', info: 'Mux adaptive bitrate tester' }
 ];
 let tvSavedStreams = [];
 let tvLoadedPlaylist = [];
