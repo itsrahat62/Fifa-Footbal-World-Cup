@@ -1438,6 +1438,7 @@ select option{background:#0d1a2e;color:#fff}
 
 <script src="https://cdn.plyr.io/3.7.8/plyr.polyfilled.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.16.3/shaka-player.compiled.js"></script>
 <script>
 // ══════════ DATA ══════════════════════════════════════════
 const TIMEZONES=[
@@ -2262,9 +2263,18 @@ function buildDropdowns(){
 // ══════════ LIVE TV PLAYER JS INTEGRATION ══════════════════
 let tvPlayer = null;
 let tvHls = null;
+let tvShaka = null;
 let tvIsHLS = false;
 const tvPresetChannels = [
   // ═══════════ 🏆 WORLD CUP & SPORTS ═══════════ (all verified playing)
+  // ── Premium match channels (DRM DASH, played ad-free in our own player) ──
+  { id: 'wc1', cat: 'sports', title: '⭐ FOX ONE (WC matches)', type: 'dash', url: 'https://abgfgo7aaaaaaaammo4qlji7ci5df.ta.bia-cf.live.pv-cdn.net/pdx-nitro/live/clients/dash/enc/ap5wz1ofsp/out/v1/7fa6feef143747beaa186ebb6dfb2532/cenc.mpd', key: 'c620c93c60c04999eb9ddc28ecfb70a8:e76a709c251313190e76cb3c3d3a5824', info: 'VERIFIED — FOX coverage, English (ad-free)' },
+  { id: 'wc2', cat: 'sports', title: '⭐ D Sports (WC matches)', type: 'dash', url: 'https://otte.live.fly.ww.aiv-cdn.net/gru-nitro/live/clients/dash/enc/ubehitlwzo/out/v1/8e09c381a51f4366a19e979418112e8f/cenc.mpd', key: 'a7d11d37a1f7611ee88d4db880171f32:68f96d618b0b956b008c445896a25a79', info: 'VERIFIED — D Sports live (ad-free)' },
+  { id: 'wc3', cat: 'sports', title: '⭐ WC Live (PLDT)', type: 'dash', url: 'https://qp-pldt-live-bpk-ucd-prod.akamaized.net/bpk-tv/ch299/default/index.mpd', key: '549ab7cd35a64bb6bb479ecead04d69d:829799ed534d11fcadeb4b192467e050', info: 'VERIFIED — dedicated WC live channel (ad-free)' },
+  { id: 'wc4', cat: 'sports', title: '⭐ Telemundo (WC — Español)', type: 'dash', url: 'https://live-oneapp-prd-news.akamaized.net/Content/CMAF_OL2-CTR-4s-v2/Live/channel(kvea)/master.mpd', key: 'ce7ab3022e753307997f58afe001bac4:72d631a66e635c60829a0fe7705516c1', info: 'VERIFIED — Telemundo Spanish WC (ad-free)' },
+  { id: 'wc5', cat: 'sports', title: '⭐ Telemundo ES (WC)', type: 'dash', url: 'https://live-oneapp-prd-news.akamaized.net/Content/CMAF_OL2-CTR-4s/Live/channel(WSNS)/master.mpd', key: '7d6bb9f86e133e4cb33440b493b6b672:584ad285dcb9e7d42cf3e93f1cc3fe11', info: 'VERIFIED — Telemundo Chicago WC (ad-free)' },
+  { id: 'wc6', cat: 'sports', title: '⭐ Tundra ES (WC)', type: 'dash', url: 'https://otte.live.fly.ww.aiv-cdn.net/gru-nitro/live/clients/dash/enc/8u9cregwlt/out/v1/687f6b2a559943549be271504a948ffd/cenc.mpd', key: '1710ac2bbfcd3032d0f6533850968f47:d2548dacc8efcd1cd0af0373060c82dc', info: 'VERIFIED — Spanish WC coverage (ad-free)' },
+  { id: 'wc7', cat: 'sports', title: '⭐ M6 (France — WC)', type: 'dash', url: 'https://origin-m6web.live.6cloud.fr/out/v1/6play/6play-m6/cmaf_cenc00/dash-short-hd.mpd', key: '433ffba670963e70857859a9dff4be04:51ede3a821229fe81e71282c8eff80e3', info: 'VERIFIED — M6 France WC (ad-free)' },
   { id: 'sp1',  cat: 'sports', title: '✅ beIN XTRA (Live Football)', type: 'hls', url: 'https://bein-xtra-bein.amagi.tv/playlist.m3u8', info: 'VERIFIED — beIN free live football, works everywhere' },
   { id: 'sp2',  cat: 'sports', title: '✅ Arryadia (Morocco — Live)', type: 'hls', url: 'https://stream-lb.livemediama.com/arryadia/hls/master.m3u8', info: 'VERIFIED — Morocco TV, live WC match coverage' },
   { id: 'sp3',  cat: 'sports', title: '🏆 T Sports (BD — WC Official)', type: 'hls', url: 'https://tvsen7.aynaott.com/tsports-hd/index.m3u8', info: 'All 104 matches — works from a BD connection' },
@@ -2485,7 +2495,7 @@ function initLiveTV() {
   playLiveTVStream('hls', 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8', 'Official HLS Test Stream');
 }
 
-function playLiveTVStream(type, url, title) {
+function playLiveTVStream(type, url, title, key) {
   const plyrContainer = document.getElementById('tv-plyr-container');
   const iframeContainer = document.getElementById('tv-iframe-container');
   const iframe = document.getElementById('tv-iframe-player');
@@ -2499,10 +2509,14 @@ function playLiveTVStream(type, url, title) {
     tvHls.destroy();
     tvHls = null;
   }
+  if (tvShaka) {
+    try { tvShaka.destroy(); } catch(e) {}
+    tvShaka = null;
+  }
   url = url.trim();
 
   // Update LIVE badge & PiP visibility based on stream type
-  tvIsHLS = (type === 'hls' || type === 'mp4');
+  tvIsHLS = (type === 'hls' || type === 'mp4' || type === 'dash');
   const liveBadge = document.getElementById('tvLiveBadge');
   const pipBtn2   = document.getElementById('tvPipBtn');
   if (liveBadge) {
@@ -2532,6 +2546,27 @@ function playLiveTVStream(type, url, title) {
     } else {
       alert("HLS is not supported in your browser.");
     }
+  }
+  else if (type === 'dash') {
+    // DRM ClearKey DASH — played via Shaka Player (ad-free, direct in our player)
+    plyrContainer.classList.remove('tv-hidden');
+    iframeContainer.classList.add('tv-hidden');
+    iframe.src = '';
+    if (typeof shaka === 'undefined' || !shaka.Player.isBrowserSupported()) {
+      alert('This channel needs a modern browser (Shaka Player).');
+      return;
+    }
+    // key format "kid:key"
+    const [kid, ck] = (key || '').split(':');
+    try { shaka.polyfill.installAll(); } catch(e) {}
+    tvShaka = new shaka.Player();
+    tvShaka.attach(video).then(() => {
+      const cfg = { streaming: { bufferingGoal: 8, rebufferingGoal: 3 } };
+      if (kid && ck) cfg.drm = { clearKeys: { [kid]: ck } };
+      tvShaka.configure(cfg);
+      tvShaka.load(url).then(() => { video.play().catch(e => {}); })
+        .catch(err => { console.warn('Shaka load error', err); });
+    });
   }
   else if (type === 'iframe') {
     plyrContainer.classList.add('tv-hidden');
@@ -2598,11 +2633,11 @@ function renderTVPresets() {
     chans.forEach(ch => {
       const item = document.createElement('div');
       item.className = 'tv-channel-item';
-      const tag = ch.type === 'hls'
+      const tag = (ch.type === 'hls' || ch.type === 'dash')
         ? '<span class="tv-ch-tag live">live</span>'
         : '<span class="tv-ch-tag portal">portal</span>';
       item.innerHTML = `
-        <div class="tv-channel-icon"><i class="fa-solid ${ch.type === 'hls' ? 'fa-tower-broadcast' : 'fa-arrow-up-right-from-square'}"></i></div>
+        <div class="tv-channel-icon"><i class="fa-solid ${ch.type === 'iframe' ? 'fa-arrow-up-right-from-square' : 'fa-tower-broadcast'}"></i></div>
         <div class="tv-channel-info">
           <span class="tv-ch-name">${ch.title}</span>
           <span class="tv-ch-desc">${ch.info}</span>
@@ -2612,7 +2647,7 @@ function renderTVPresets() {
       item.addEventListener('click', () => {
         document.querySelectorAll('.tv-channel-item').forEach(el => el.classList.remove('active'));
         item.classList.add('active');
-        playLiveTVStream(ch.type, ch.url, ch.title);
+        playLiveTVStream(ch.type, ch.url, ch.title, ch.key);
       });
       list.appendChild(item);
       if (!firstItem) firstItem = item;
