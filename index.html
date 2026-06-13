@@ -685,19 +685,48 @@ select option{background:#0d1a2e;color:#fff}
 @media(max-width:768px){.bk2-gg{grid-template-columns:repeat(2,1fr)}.bk2-wc-grid{grid-template-columns:repeat(2,1fr)}}
 
 @media(max-width:768px){
-  .header-inner{flex-wrap:wrap;height:auto;padding:10px 0}
-  .header{padding:8px 16px}
+  /* ── Compact single-row header ── */
+  .header{padding:8px 12px}
+  .header-inner{height:auto;min-height:52px;gap:8px;flex-wrap:nowrap}
+  .logo-wrap{gap:7px;min-width:0}
+  .logo-icon{font-size:21px}
+  .logo-text h1{font-size:12px;letter-spacing:.6px}
+  .logo-text p{font-size:8px;letter-spacing:.8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:170px}
+  .header-right{gap:6px}
+  .hdr-clock{padding:4px 9px;border-radius:10px}
+  .hdr-clock .cl-lbl{font-size:7px;letter-spacing:1px}
+  .hdr-clock .cl-time{font-size:13px}
+  .hdr-clock .cl-date{font-size:7px}
+  .icon-btn{padding:7px 9px;font-size:13px;border-radius:10px}
+  .nav-tab{padding:12px 14px;font-size:11px;letter-spacing:.5px;gap:5px}
+
   .hero h2{font-size:24px}
   .mc-flag img{width:36px}
   .mc-time{font-size:16px}
   .mc-name{font-size:11px}
   .groups-grid{grid-template-columns:1fr}
-  .teams-grid{grid-template-columns:repeat(auto-fill,minmax(120px,1fr))}
+  .teams-grid{grid-template-columns:repeat(auto-fill,minmax(110px,1fr))}
   .stats-grid{grid-template-columns:1fr}
-  .filter-inner{flex-direction:column;align-items:stretch}
-  select,input[type=date]{min-width:auto;width:100%;background-image:none;padding-right:12px}
+
+  /* ── Compact 2-column filter grid (was 6 stacked full-width rows) ── */
+  .filter-bar{padding:10px 12px}
+  .filter-inner{display:grid;grid-template-columns:1fr 1fr;gap:7px;align-items:center}
+  .filter-inner .view-toggle{grid-column:1/-1;display:flex;gap:6px}
+  .filter-inner .view-toggle .vt-btn{flex:1;justify-content:center}
+  .filter-inner .fl{display:none}
+  select,input[type=date]{min-width:0;width:100%;padding:9px 10px;padding-right:24px;font-size:12px}
+  input[type=date]{background-image:none;padding-right:10px}
+  .filter-inner .btn-sm{justify-content:center}
+  .filter-inner .badge-count{grid-column:1/-1;justify-self:center}
+
   .td-head{flex-direction:column;align-items:flex-start}
   .td-next{margin-left:0}
+  .main{padding-left:12px;padding-right:12px}
+}
+@media(max-width:430px){
+  .logo-text p{display:none}
+  .nav-tab{padding:11px 11px;font-size:10px}
+  .hdr-clock .cl-time{font-size:12px}
 }
 
 /* ── LIVE TV STREAMING SYSTEM ── */
