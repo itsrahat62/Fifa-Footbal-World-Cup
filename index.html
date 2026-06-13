@@ -930,6 +930,52 @@ select option{background:#0d1a2e;color:#fff}
   overflow-y: auto;
   padding-right: 4px;
 }
+.tv-cat-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.tv-cat-tab {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  color: var(--t2);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 6px 11px;
+  border-radius: 18px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+.tv-cat-tab:hover { border-color: rgba(245,197,24,0.3); color: var(--t1); }
+.tv-cat-tab.active {
+  background: var(--gold3);
+  border-color: rgba(245,197,24,0.5);
+  color: var(--gold);
+}
+.tv-cat-count {
+  font-size: 9px;
+  background: rgba(255,255,255,0.1);
+  padding: 1px 6px;
+  border-radius: 10px;
+  font-weight: 800;
+}
+.tv-cat-tab.active .tv-cat-count { background: rgba(245,197,24,0.25); }
+.tv-section-header {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--gold);
+  padding: 12px 4px 6px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 4px;
+}
+.tv-section-header:first-child { padding-top: 0; }
 .tv-channel-item {
   display: flex;
   align-items: center;
@@ -2161,38 +2207,86 @@ let tvPlayer = null;
 let tvHls = null;
 let tvIsHLS = false;
 const tvPresetChannels = [
-  // ── BD Live Channels (HLS) ──
-  { id: 'tp1',  title: '📺 BTV National (BD)', type: 'hls', url: 'https://owrcovcrpy.gpcdn.net/bpk-tv/1709/output/index.m3u8', info: 'Bangladesh Television Live Feed' },
-  { id: 'tp2',  title: '📺 Somoy TV (BD)', type: 'hls', url: 'https://owrcovcrpy.gpcdn.net/bpk-tv/1702/output/index.m3u8', info: 'Popular Bangladeshi News stream' },
-  { id: 'tp3',  title: '📺 Channel 24 (BD)', type: 'hls', url: 'https://owrcovcrpy.gpcdn.net/bpk-tv/1703/output/index.m3u8', info: 'Bangladeshi Live News Channel' },
-  { id: 'tp4',  title: '📺 Jamuna TV (BD)', type: 'hls', url: 'https://owrcovcrpy.gpcdn.net/bpk-tv/1701/output/index.m3u8', info: 'Bangladeshi 24/7 News Feed' },
-  // ── World Cup 2026 — Al Kass Qatar (HLS 1080p) ──
-  { id: 'tp5',  title: '🏆 Al Kass 1 — Qatar', type: 'hls', url: 'https://liveeu-gcp.alkassdigital.net/alkass1-p/main.m3u8', info: 'Qatar sports HD — World Cup 2026 live' },
-  { id: 'tp6',  title: '🏆 Al Kass 2 — Qatar', type: 'hls', url: 'https://liveeu-gcp.alkassdigital.net/alkass2-p/main.m3u8', info: 'Qatar sports ch2 — WC live' },
-  { id: 'tp7',  title: '🏆 Al Kass 3 — Qatar', type: 'hls', url: 'https://liveeu-gcp.alkassdigital.net/alkass3-p/main.m3u8', info: 'Qatar sports ch3 — WC live' },
-  { id: 'tp8',  title: '🏆 Al Kass 4 — Qatar', type: 'hls', url: 'https://liveeu-gcp.alkassdigital.net/alkass4-p/main.m3u8', info: 'Qatar sports ch4 — WC live' },
-  // ── Free Sports HLS Streams ──
-  { id: 'tp9',  title: '⚽ FIFA+ Free (HLS)', type: 'hls', url: 'https://jmp2.uk/plu-660c29b5aec9680008f5b4a4.m3u8', info: 'FIFA official free channel — WC content' },
-  { id: 'tp10', title: '⚽ beIN XTRA Free', type: 'hls', url: 'https://bein-xtra-bein.amagi.tv/playlist.m3u8', info: 'beIN Sports free tier — 1080p HD' },
-  { id: 'tp11', title: '⚽ ESPN8 The Ocho', type: 'hls', url: 'https://d3b6q2ou5kp8ke.cloudfront.net/ESPNTheOcho.m3u8', info: 'ESPN free sports channel — 1080p' },
-  { id: 'tp12', title: '⚽ CCTV-5 Sports', type: 'hls', url: 'https://node1.olelive.com:6443/live/CCTV5HD/hls.m3u8', info: 'China Central TV Sports HD' },
-  { id: 'tp13', title: '⚽ CCTV-5+ Events', type: 'hls', url: 'https://node1.olelive.com:6443/live/CCTV5PHD/hls.m3u8', info: 'China Sports Events HD' },
-  { id: 'tp14', title: '⚽ Esport3 (Catalunya)', type: 'hls', url: 'https://directes-tv-int.3catdirectes.cat/live-content/esport3-hls/master.m3u8', info: 'Catalan public sports — 1080p' },
-  { id: 'tp15', title: '⚽ ORF Sport+ (Austria)', type: 'hls', url: 'https://orfs.mdn.ors.at/out/u/orfs/q8c/manifest.m3u8', info: 'Austrian public sports broadcast' },
-  { id: 'tp16', title: '⚽ CBC Sport (Azerbaijan)', type: 'hls', url: 'https://mn-nl.mncdn.com/cbcsports_live/cbcsports/playlist.m3u8', info: 'Azerbaijan state sports channel' },
-  { id: 'tp17', title: '⚽ Africa 24 Sport', type: 'hls', url: 'https://africa24.vedge.infomaniak.com/livecast/ik:africa24sport/manifest.m3u8', info: 'Africa 24 sports news — 1080p' },
-  { id: 'tp18', title: '⚽ Bahrain Sports 1', type: 'hls', url: 'https://5c7b683162943.streamlock.net/live/ngrp:sportsone_all/playlist.m3u8', info: 'Bahrain National Sports Channel 1' },
-  { id: 'tp19', title: '⚽ Bahrain Sports 2', type: 'hls', url: 'https://5c7b683162943.streamlock.net/live/ngrp:bahrainsportstwo_all/playlist.m3u8', info: 'Bahrain National Sports Channel 2' },
-  // ── BD Streaming Apps (iframe — open site if blocked) ──
-  { id: 'tp20', title: '📺 T-Sports BD', type: 'iframe', url: 'https://www.tsports.com/', info: 'Bangladesh official WC broadcaster' },
-  { id: 'tp21', title: '📺 GTV Live (BD)', type: 'iframe', url: 'https://gtvlive.net/', info: 'Gazi TV Bangladesh live' },
-  { id: 'tp22', title: '📺 Toffee (Banglalink)', type: 'iframe', url: 'https://toffee.im/', info: 'All 104 WC matches — Banglalink free' },
-  { id: 'tp23', title: '📺 Bioscope (GP)', type: 'iframe', url: 'https://bioscope.tv/', info: 'WC streaming — Grameenphone free' },
-  { id: 'tp24', title: '🏆 Sportzfy Portal', type: 'iframe', url: 'https://sportzfytvlive.xyz/', info: 'Free HD multi-link sports streams' },
-  { id: 'tp25', title: '🏆 Sportsurge Portal', type: 'iframe', url: 'https://www.sportsurge.net/', info: 'Multi-link free sports portal' },
-  { id: 'tp26', title: '⚽ FIFA+ Official', type: 'iframe', url: 'https://www.fifa.com/fifaplus/en/home', info: 'Official FIFA free streaming portal' },
-  { id: 'tp27', title: '🔧 HLS Test Stream', type: 'hls', url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8', info: 'Mux adaptive bitrate tester' }
+  // ═══════════ 🏆 WORLD CUP & SPORTS ═══════════
+  { id: 'sp1',  cat: 'sports', title: '🏆 T Sports (BD — WC Official)', type: 'hls', url: 'https://tvsen7.aynaott.com/tsports-hd/index.m3u8', info: 'Bangladesh World Cup 2026 rights holder' },
+  { id: 'sp2',  cat: 'sports', title: '🏆 T Sports HD (alt)', type: 'hls', url: 'https://stream.sunplex.live/T-SPORTS/index.m3u8', info: 'T Sports backup feed' },
+  { id: 'sp3',  cat: 'sports', title: '🏆 Al Kass 1 — Qatar', type: 'hls', url: 'https://liveeu-gcp.alkassdigital.net/alkass1-p/main.m3u8', info: 'Qatar sports HD — WC 2026 live' },
+  { id: 'sp4',  cat: 'sports', title: '🏆 Al Kass 2 — Qatar', type: 'hls', url: 'https://liveeu-gcp.alkassdigital.net/alkass2-p/main.m3u8', info: 'Qatar sports ch2 — WC live' },
+  { id: 'sp5',  cat: 'sports', title: '🏆 Al Kass 3 — Qatar', type: 'hls', url: 'https://liveeu-gcp.alkassdigital.net/alkass3-p/main.m3u8', info: 'Qatar sports ch3 — WC live' },
+  { id: 'sp6',  cat: 'sports', title: '🏆 Al Kass 4 — Qatar', type: 'hls', url: 'https://liveeu-gcp.alkassdigital.net/alkass4-p/main.m3u8', info: 'Qatar sports ch4 — WC live' },
+  { id: 'sp7',  cat: 'sports', title: '⚽ Arryadia (Morocco)', type: 'hls', url: 'https://stream-lb.livemediama.com/arryadia/hls/master.m3u8', info: 'Morocco public sports — WC coverage' },
+  { id: 'sp8',  cat: 'sports', title: '⚽ FIFA+ Official Free', type: 'hls', url: 'https://jmp2.uk/plu-660c29b5aec9680008f5b4a4.m3u8', info: 'FIFA official free channel' },
+  { id: 'sp9',  cat: 'sports', title: '⚽ beIN XTRA Free', type: 'hls', url: 'https://bein-xtra-bein.amagi.tv/playlist.m3u8', info: 'beIN Sports free tier — 1080p HD' },
+  { id: 'sp10', cat: 'sports', title: '⚽ CBS Sports Golazo', type: 'hls', url: 'https://proped3fhg87.airspace-cdn.cbsivideo.com/golazo-live-dai/master/golazo-live-dai.m3u8', info: 'CBS soccer 24/7 channel' },
+  { id: 'sp11', cat: 'sports', title: '⚽ Sports 18 HD', type: 'hls', url: 'https://stream.sunplex.live/SPORTS-18/index.m3u8', info: 'Indian sports HD feed' },
+  { id: 'sp12', cat: 'sports', title: '⚽ DD Sports (India)', type: 'hls', url: 'https://d3qs3d2rkhfqrt.cloudfront.net/out/v1/b17adfe543354fdd8d189b110617cddd/index.m3u8', info: 'India public sports broadcast' },
+  { id: 'sp13', cat: 'sports', title: '⚽ ESPN8 The Ocho', type: 'hls', url: 'https://d3b6q2ou5kp8ke.cloudfront.net/ESPNTheOcho.m3u8', info: 'ESPN free sports channel — 1080p' },
+  { id: 'sp14', cat: 'sports', title: '⚽ CCTV-5 Sports', type: 'hls', url: 'https://node1.olelive.com:6443/live/CCTV5HD/hls.m3u8', info: 'China Central TV Sports HD' },
+  { id: 'sp15', cat: 'sports', title: '⚽ CCTV-5+ Events', type: 'hls', url: 'https://node1.olelive.com:6443/live/CCTV5PHD/hls.m3u8', info: 'China Sports Events HD' },
+  { id: 'sp16', cat: 'sports', title: '⚽ Esport3 (Catalunya)', type: 'hls', url: 'https://directes-tv-int.3catdirectes.cat/live-content/esport3-hls/master.m3u8', info: 'Catalan public sports — 1080p' },
+  { id: 'sp17', cat: 'sports', title: '⚽ ORF Sport+ (Austria)', type: 'hls', url: 'https://orfs.mdn.ors.at/out/u/orfs/q8c/manifest.m3u8', info: 'Austrian public sports broadcast' },
+  { id: 'sp18', cat: 'sports', title: '⚽ Bahrain Sports 1', type: 'hls', url: 'https://5c7b683162943.streamlock.net/live/ngrp:sportsone_all/playlist.m3u8', info: 'Bahrain National Sports 1' },
+  { id: 'sp19', cat: 'sports', title: '⚽ Bahrain Sports 2', type: 'hls', url: 'https://5c7b683162943.streamlock.net/live/ngrp:bahrainsportstwo_all/playlist.m3u8', info: 'Bahrain National Sports 2' },
+  { id: 'sp20', cat: 'sports', title: '⚽ Gazi TV (GTV) HD', type: 'hls', url: 'https://stream.sunplex.live/GAZI-TV/index.m3u8', info: 'Gazi TV Bangladesh sports' },
+  { id: 'sp21', cat: 'sports', title: '🏏 Cricket Gold', type: 'hls', url: 'https://streams2.sofast.tv/ptnr-yupptv/title-cricketgold/v1/master/611d79b11b77e2f571934fd80ca1413453772ac7/b2048bb8-1686-4432-aa50-647245383e0c/manifest.m3u8', info: 'Classic cricket 24/7' },
+  { id: 'sp22', cat: 'sports', title: '⚽ CazeTV (Brazil)', type: 'hls', url: 'https://dfr80qz435crc.cloudfront.net/MNOP/Amagi/Caze/Caze_TV_BR/Caze_TV.m3u8', info: 'Brazil football channel' },
+  // ── Sports portals (open in new tab if blocked) ──
+  { id: 'sp23', cat: 'sports', title: '🏆 Sportzfy Portal', type: 'iframe', url: 'https://sportzfytvlive.xyz/', info: 'Free HD multi-link sports streams' },
+  { id: 'sp24', cat: 'sports', title: '🏆 Sportsurge Portal', type: 'iframe', url: 'https://www.sportsurge.net/', info: 'Multi-link free sports portal' },
+  { id: 'sp25', cat: 'sports', title: '🏆 FIFA+ Web Portal', type: 'iframe', url: 'https://www.fifa.com/fifaplus/en/home', info: 'Official FIFA streaming portal' },
+  { id: 'sp26', cat: 'sports', title: '🏆 Toffee (Banglalink)', type: 'iframe', url: 'https://toffee.im/', info: 'All 104 WC matches — Banglalink free' },
+
+  // ═══════════ 📰 NEWS ═══════════
+  // BD News
+  { id: 'nw1',  cat: 'news', title: '📺 Channel 1 (BD)', type: 'hls', url: 'https://owrcovcrpy.gpcdn.net/bpk-tv/1702/output/index.m3u8', info: 'Bangladeshi live channel' },
+  { id: 'nw2',  cat: 'news', title: '📰 Jamuna TV (BD)', type: 'hls', url: 'https://bozztv.com/rongo/rongo-JamunaTelevision/index.m3u8', info: 'Jamuna Television 24/7 news' },
+  { id: 'nw3',  cat: 'news', title: '📰 Channel 24 (BD)', type: 'hls', url: 'https://bozztv.com/rongo/rongo-Channel24HD/index.m3u8', info: 'Bangladeshi live news channel' },
+  { id: 'nw4',  cat: 'news', title: '📰 Independent TV (BD)', type: 'hls', url: 'https://bozztv.com/rongo/rongo-IndependentTV/index.m3u8', info: 'Independent Television BD' },
+  { id: 'nw5',  cat: 'news', title: '📰 DBC News (BD)', type: 'hls', url: 'https://owrcovcrpy.gpcdn.net/bpk-tv/1728/output/index.m3u8', info: 'DBC News 24/7' },
+  { id: 'nw6',  cat: 'news', title: '📰 News24 (BD)', type: 'hls', url: 'https://owrcovcrpy.gpcdn.net/bpk-tv/1708/output/index.m3u8', info: 'News24 Bangladesh' },
+  { id: 'nw7',  cat: 'news', title: '📰 ATN News (BD)', type: 'hls', url: 'https://bozztv.com/rongo/rongo-ATNNews/index.m3u8', info: 'ATN News Bangladesh' },
+  { id: 'nw8',  cat: 'news', title: '📰 Ekattor TV (BD)', type: 'hls', url: 'https://owrcovcrpy.gpcdn.net/bpk-tv/1705/output/1705.m3u8', info: 'Ekattor Television' },
+  { id: 'nw9',  cat: 'news', title: '📰 Desh TV (BD)', type: 'hls', url: 'https://bozztv.com/rongo/rongo-DeshTV/index.m3u8', info: 'Desh Television BD' },
+  { id: 'nw10', cat: 'news', title: '📰 Sangsad TV (BD)', type: 'hls', url: 'https://bozztv.com/rongo/rongo-SangsadTV/index.m3u8', info: 'Bangladesh Parliament TV' },
+  // International News
+  { id: 'nw11', cat: 'news', title: '🌍 Al Jazeera English', type: 'hls', url: 'https://live-hls-apps-aje-fa.getaj.net/AJE/index.m3u8', info: 'Qatar global news network' },
+  { id: 'nw12', cat: 'news', title: '🌍 France 24 English', type: 'hls', url: 'https://live.france24.com/hls/live/2037218-b/F24_EN_HI_HLS/master_5000.m3u8', info: 'France 24 international news' },
+  { id: 'nw13', cat: 'news', title: '🌍 DW English', type: 'hls', url: 'https://amg01644-amg01644c1-amgplt0343.playout.now3.amagi.tv/ts-eu-w1-n2/playlist/amg01644-amg01644c1-amgplt0343/playlist.m3u8', info: 'Deutsche Welle English' },
+  { id: 'nw14', cat: 'news', title: '🌍 CGTN', type: 'hls', url: 'https://amg00405-rakutentv-cgtn-rakuten-i9tar.amagi.tv/master.m3u8', info: 'China Global Television' },
+  { id: 'nw15', cat: 'news', title: '🌍 Euronews English', type: 'hls', url: 'https://jmp2.uk/plu-61de96114757070008d33cae.m3u8', info: 'Euronews English feed' },
+  { id: 'nw16', cat: 'news', title: '🇮🇳 Aaj Tak HD', type: 'hls', url: 'https://feeds.intoday.in/aajtak/api/aajtakhd/master.m3u8', info: 'India Hindi news HD' },
+  { id: 'nw17', cat: 'news', title: '🇮🇳 India Today', type: 'hls', url: 'https://d1rc86nwwc9fag.cloudfront.net/vglive-sk-293160/master.m3u8', info: 'India Today English news' },
+  { id: 'nw18', cat: 'news', title: '🇮🇳 India TV', type: 'hls', url: 'https://pl-indiatvnews.akamaized.net/out/v1/db79179b608641ceaa5a4d0dd0dca8da/index.m3u8', info: 'India TV Hindi news' },
+
+  // ═══════════ 🎬 ENTERTAINMENT ═══════════
+  // BD Entertainment
+  { id: 'en1',  cat: 'ent', title: '🎬 NTV (BD)', type: 'hls', url: 'https://owrcovcrpy.gpcdn.net/bpk-tv/1716/output/index.m3u8', info: 'NTV Bangladesh entertainment' },
+  { id: 'en2',  cat: 'ent', title: '🎬 Channel i (BD)', type: 'hls', url: 'https://owrcovcrpy.gpcdn.net/bpk-tv/1723/output/index.m3u8', info: 'Channel i Bangladesh' },
+  { id: 'en3',  cat: 'ent', title: '🎬 Maasranga TV (BD)', type: 'hls', url: 'https://owrcovcrpy.gpcdn.net/bpk-tv/1722/output/index.m3u8', info: 'Maasranga Television' },
+  { id: 'en4',  cat: 'ent', title: '🎬 RTV (BD)', type: 'hls', url: 'https://bozztv.com/rongo/rongo-RTV/index.m3u8', info: 'RTV Bangladesh entertainment' },
+  { id: 'en5',  cat: 'ent', title: '🎬 Deepto TV (BD)', type: 'hls', url: 'https://owrcovcrpy.gpcdn.net/bpk-tv/1711/output/index.m3u8', info: 'Deepto Television' },
+  { id: 'en6',  cat: 'ent', title: '🎬 Bangla Vision (BD)', type: 'hls', url: 'https://owrcovcrpy.gpcdn.net/bpk-tv/1715/output/index.m3u8', info: 'Bangla Vision BD' },
+  { id: 'en7',  cat: 'ent', title: '🎬 BTV National (BD)', type: 'hls', url: 'https://owrcovcrpy.gpcdn.net/bpk-tv/1709/output/1709.m3u8', info: 'Bangladesh Television' },
+  { id: 'en8',  cat: 'ent', title: '🎬 ATN Bangla (BD)', type: 'hls', url: 'https://tvsen5.aynaott.com/atnbangla/index.m3u8', info: 'ATN Bangla entertainment' },
+  { id: 'en9',  cat: 'ent', title: '🎬 SA TV (BD)', type: 'hls', url: 'https://tvsen6.aynaott.com/satv/index.m3u8', info: 'SA Television BD' },
+  { id: 'en10', cat: 'ent', title: '🎬 Boishakhi TV (BD)', type: 'hls', url: 'https://tvsen6.aynaott.com/boishakhitv/index.m3u8', info: 'Boishakhi Television' },
+  { id: 'en11', cat: 'ent', title: '🎬 Asian TV (BD)', type: 'hls', url: 'https://tvsen6.aynaott.com/asiantv/index.m3u8', info: 'Asian TV Bangladesh' },
+  { id: 'en12', cat: 'ent', title: '🎬 Duronto TV (BD Kids)', type: 'hls', url: 'https://tvsen5.aynaott.com/durontotv/index.m3u8', info: 'Duronto TV — kids channel' },
+  { id: 'en13', cat: 'ent', title: '🎬 Mohona TV (BD)', type: 'hls', url: 'https://bozztv.com/rongo/rongo-MohonaTV/index.m3u8', info: 'Mohona Television' },
+  // India Entertainment
+  { id: 'en14', cat: 'ent', title: '🇮🇳 DD National HD', type: 'hls', url: 'https://d3qs3d2rkhfqrt.cloudfront.net/out/v1/40492a64c1db4a1385ba1a397d357d3a/index.m3u8', info: 'India national entertainment' },
+  { id: 'en15', cat: 'ent', title: '🇮🇳 Mazhavil Manorama', type: 'hls', url: 'https://cdn-7.pishow.tv/live/1129/master.m3u8', info: 'Malayalam entertainment HD' },
+
+  // ═══════════ 🔧 UTILITY ═══════════
+  { id: 'ut1',  cat: 'ent', title: '🔧 HLS Test Stream', type: 'hls', url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8', info: 'Mux adaptive bitrate tester' }
 ];
+const tvCategories = [
+  { key: 'all',    label: 'All' },
+  { key: 'sports', label: '🏆 Sports' },
+  { key: 'news',   label: '📰 News' },
+  { key: 'ent',    label: '🎬 Entertainment' }
+];
+let tvActiveCat = 'all';
 let tvSavedStreams = [];
 let tvLoadedPlaylist = [];
 
@@ -2420,26 +2514,60 @@ function playLiveTVStream(type, url, title) {
 function renderTVPresets() {
   const list = document.getElementById('tv-preset-list');
   if (!list) return;
-  list.innerHTML = '';
-  tvPresetChannels.forEach(ch => {
-    const item = document.createElement('div');
-    item.className = 'tv-channel-item';
-    item.innerHTML = `
-      <div class="tv-channel-icon"><i class="fa-solid ${ch.type === 'hls' ? 'fa-bolt' : 'fa-link'}"></i></div>
-      <div class="tv-channel-info">
-        <span class="tv-ch-name">${ch.title}</span>
-        <span class="tv-ch-desc">${ch.info}</span>
-      </div>
-    `;
-    item.addEventListener('click', () => {
-      document.querySelectorAll('.tv-channel-item').forEach(el => el.classList.remove('active'));
-      item.classList.add('active');
-      playLiveTVStream(ch.type, ch.url, ch.title);
-    });
-    list.appendChild(item);
+
+  // ── Category filter tabs ──
+  let tabsEl = document.getElementById('tv-cat-tabs');
+  if (!tabsEl) {
+    tabsEl = document.createElement('div');
+    tabsEl.id = 'tv-cat-tabs';
+    tabsEl.className = 'tv-cat-tabs';
+    list.parentNode.insertBefore(tabsEl, list);
+  }
+  tabsEl.innerHTML = '';
+  tvCategories.forEach(c => {
+    const count = c.key === 'all' ? tvPresetChannels.length : tvPresetChannels.filter(ch => ch.cat === c.key).length;
+    const btn = document.createElement('button');
+    btn.className = 'tv-cat-tab' + (tvActiveCat === c.key ? ' active' : '');
+    btn.innerHTML = `${c.label} <span class="tv-cat-count">${count}</span>`;
+    btn.addEventListener('click', () => { tvActiveCat = c.key; renderTVPresets(); });
+    tabsEl.appendChild(btn);
   });
-  // Mark first active
-  if (list.firstChild) list.firstChild.classList.add('active');
+
+  list.innerHTML = '';
+  const sections = tvActiveCat === 'all'
+    ? [['sports','🏆 World Cup & Sports'],['news','📰 News'],['ent','🎬 Entertainment']]
+    : [[tvActiveCat, tvCategories.find(c=>c.key===tvActiveCat).label]];
+
+  let firstItem = null;
+  sections.forEach(([catKey, catLabel]) => {
+    const chans = tvPresetChannels.filter(ch => ch.cat === catKey);
+    if (!chans.length) return;
+    if (tvActiveCat === 'all') {
+      const hdr = document.createElement('div');
+      hdr.className = 'tv-section-header';
+      hdr.textContent = catLabel;
+      list.appendChild(hdr);
+    }
+    chans.forEach(ch => {
+      const item = document.createElement('div');
+      item.className = 'tv-channel-item';
+      item.innerHTML = `
+        <div class="tv-channel-icon"><i class="fa-solid ${ch.type === 'hls' ? 'fa-bolt' : 'fa-link'}"></i></div>
+        <div class="tv-channel-info">
+          <span class="tv-ch-name">${ch.title}</span>
+          <span class="tv-ch-desc">${ch.info}</span>
+        </div>
+      `;
+      item.addEventListener('click', () => {
+        document.querySelectorAll('.tv-channel-item').forEach(el => el.classList.remove('active'));
+        item.classList.add('active');
+        playLiveTVStream(ch.type, ch.url, ch.title);
+      });
+      list.appendChild(item);
+      if (!firstItem) firstItem = item;
+    });
+  });
+  if (firstItem) firstItem.classList.add('active');
 }
 
 function saveTVStream(title, type, url) {
