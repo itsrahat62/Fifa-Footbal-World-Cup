@@ -515,6 +515,45 @@ select option{background:#0d1a2e;color:#fff}
 .tdm-vs{font-size:9px;font-weight:800;color:rgba(255,255,255,0.3);letter-spacing:2px;flex-shrink:0}
 .tdm-info{font-size:10px;color:rgba(255,255,255,0.4);padding-top:6px;border-top:1px solid rgba(255,255,255,0.06)}
 
+/* ── TODAY DIVIDER ── */
+.today-divider{
+  border-left:3px solid var(--gold);
+  background:rgba(245,197,24,0.05);
+}
+.today-pill{
+  background:var(--gold);color:#000;font-size:9px;font-weight:800;
+  padding:2px 8px;border-radius:10px;margin-left:8px;letter-spacing:1px;
+  vertical-align:middle;
+}
+
+/* ── PREVIOUS MATCHES SECTION ── */
+.prev-section-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 16px;background:var(--glass);border:1px solid var(--border);
+  border-radius:var(--r);cursor:pointer;margin:20px 0 6px;
+  color:var(--t2);font-size:13px;font-weight:700;
+  transition:background 0.2s ease;user-select:none;
+}
+.prev-section-header:hover{background:var(--glass2);}
+.prev-toggle-icon{transition:transform 0.25s ease;font-size:11px;}
+.prev-toggle-icon.open{transform:rotate(90deg);}
+.prev-matches-section{display:none;}
+
+/* FT badge */
+.mc-ft-badge{
+  background:rgba(255,255,255,0.08);color:var(--t2);
+  font-size:9px;font-weight:800;padding:2px 7px;
+  border-radius:10px;letter-spacing:1px;border:1px solid var(--border);
+  margin-left:auto;
+}
+
+/* Past match card */
+.mc-past{opacity:0.72;transition:opacity 0.2s ease;}
+.mc-past:hover{opacity:1;}
+
+/* Winner highlight */
+.mc-winner .mc-name{color:var(--gold)!important;font-weight:800;}
+
 /* NO RESULTS */
 .no-results{
   text-align:center;padding:60px 24px;background:var(--glass);
@@ -1105,26 +1144,6 @@ select option{background:#0d1a2e;color:#fff}
 
 <main class="main">
   <div class="tab-content active" id="tab-fixtures">
-    <div class="hero">
-      <div class="hero-floater">⚽</div>
-      <div class="hero-floater">🏆</div>
-      <div class="hero-inner">
-        <div class="hero-eyebrow">⚽ 48 Teams · 12 Groups · 104 Matches</div>
-        <h2>THE GREATEST SHOW ON EARTH</h2>
-        <p class="hero-sub">June 11 – July 19, 2026 &nbsp;·&nbsp; 16 Venues across 3 Nations</p>
-        <div class="cd-row">
-          <div class="cd-box"><div class="cd-num" id="cdDays">--</div><div class="cd-lbl">Days</div></div>
-          <div class="cd-box"><div class="cd-num" id="cdHours">--</div><div class="cd-lbl">Hours</div></div>
-          <div class="cd-box"><div class="cd-num" id="cdMins">--</div><div class="cd-lbl">Mins</div></div>
-          <div class="cd-box"><div class="cd-num" id="cdSecs">--</div><div class="cd-lbl">Secs</div></div>
-        </div>
-        <div class="host-row">
-          <div class="host-pill">🇺🇸 United States <span>11 Venues</span></div>
-          <div class="host-pill">🇲🇽 Mexico <span>3 Venues</span></div>
-          <div class="host-pill">🇨🇦 Canada <span>2 Venues</span></div>
-        </div>
-      </div>
-    </div>
     <div id="fixturesList"></div>
   </div>
 
@@ -1644,6 +1663,53 @@ function filteredMatches(){
   });
 }
 
+/* ── helpers ── */
+function isDateToday(dateStr){
+  try{
+    const today=new Date().toLocaleDateString('en',{timeZone:selectedTZ,weekday:'short',month:'long',day:'numeric',year:'numeric'});
+    return dateStr===today;
+  }catch(e){return false;}
+}
+
+function makePastCard(m){
+  const h=TEAMS[m.home]||{flag:'🏴',strength:70},a=TEAMS[m.away]||{flag:'🏳',strength:70};
+  const dt=toLocalDate(m.utc),t=toLocalTime(m.utc);
+  const hasScore=m.hs!==undefined&&m.as!==undefined;
+  const hw=hasScore&&m.hs>m.as,aw=hasScore&&m.as>m.hs;
+  return`<div class="mc mc-past" onclick="openPoll(${m.id})">
+  <div class="mc-top">
+    <span class="mc-stage">${m.stage}</span>
+    <span class="mc-ft-badge">FT</span>
+    <span class="mc-venue">📍 ${m.venue}, ${m.city}</span>
+  </div>
+  <div class="mc-body">
+    <div class="mc-team${hw?' mc-winner':''}">
+      <div class="mc-flag">${fi(h.iso,52,6)}</div>
+      <div class="mc-name${m.home.length>10?' sm':''}">${m.home}</div>
+    </div>
+    <div class="mc-center">
+      ${hasScore?`<div class="mc-score">${m.hs} – ${m.as}</div>`:'<div class="mc-vs" style="opacity:.5">– –</div>'}
+      <div class="mc-date">${dt}</div>
+      <div class="mc-tz">${t} ${getTZLabel()}</div>
+    </div>
+    <div class="mc-team${aw?' mc-winner':''}">
+      <div class="mc-flag">${fi(a.iso,52,6)}</div>
+      <div class="mc-name${m.away.length>10?' sm':''}">${m.away}</div>
+    </div>
+  </div>
+</div>`;
+}
+
+let prevMatchesOpen=false;
+function togglePrevMatches(){
+  const sec=document.getElementById('prevMatchesSection');
+  const icon=document.getElementById('prevToggleIcon');
+  if(!sec)return;
+  prevMatchesOpen=!prevMatchesOpen;
+  sec.style.display=prevMatchesOpen?'block':'none';
+  if(icon)icon.classList.toggle('open',prevMatchesOpen);
+}
+
 function renderFixtures(){
   const ms=filteredMatches();
   document.getElementById('matchCount').textContent=`${ms.length} match${ms.length!==1?'es':''}`;
@@ -1651,28 +1717,66 @@ function renderFixtures(){
     document.getElementById('fixturesList').innerHTML=`<div class="no-results"><div class="nr-icon">🔍</div><p>No matches found</p></div>`;
     return;
   }
+
+  const now=Date.now();
+  const matchEndMs=115*60*1000; // 115 min after kick-off = past
+  const past=ms.filter(m=>!m.tbd&&new Date(m.utc).getTime()+matchEndMs<now).sort((a,b)=>new Date(b.utc)-new Date(a.utc));
+  const upcoming=ms.filter(m=>m.tbd||new Date(m.utc).getTime()+matchEndMs>=now).sort((a,b)=>new Date(a.utc)-new Date(b.utc));
+
   let html='';
-  if(viewMode==='date'){
-    const sorted=ms.slice().sort((a,b)=>new Date(a.utc)-new Date(b.utc));
+
+  // ── Upcoming matches ──
+  if(upcoming.length){
+    if(viewMode==='date'){
+      const byDate={};const dateOrder=[];
+      upcoming.forEach(m=>{
+        const d=new Date(m.utc).toLocaleDateString('en',{timeZone:selectedTZ,weekday:'short',month:'long',day:'numeric',year:'numeric'});
+        if(!byDate[d]){byDate[d]=[];dateOrder.push(d);}
+        byDate[d].push(m);
+      });
+      dateOrder.forEach(d=>{
+        const today=isDateToday(d);
+        html+=`<div class="date-divider${today?' today-divider':''}" ${today?'id="today-anchor"':''}>📅 ${d}${today?'<span class="today-pill">TODAY</span>':''}<span class="stage-count" style="margin-left:8px">${byDate[d].length}</span></div>`;
+        html+=`<div class="matches-list">${byDate[d].map(makeCard).join('')}</div>`;
+      });
+    } else {
+      const byStage={};
+      upcoming.forEach(m=>{if(!byStage[m.stage])byStage[m.stage]=[];byStage[m.stage].push(m);});
+      Object.keys(byStage).sort((a,b)=>stageOrd(a)-stageOrd(b)).forEach(s=>{
+        html+=`<div class="stage-divider">${stageIcon(s)} ${s}<span class="stage-count">${byStage[s].length}</span></div>`;
+        html+=`<div class="matches-list">${byStage[s].map(makeCard).join('')}</div>`;
+      });
+    }
+  }
+
+  // ── Previous matches (collapsible) ──
+  if(past.length){
+    html+=`<div class="prev-section-header" onclick="togglePrevMatches()">
+      <span>📋 Previous Matches &nbsp;<span style="font-weight:400;color:var(--t3)">(${past.length})</span></span>
+      <span class="prev-toggle-icon${prevMatchesOpen?' open':''}" id="prevToggleIcon">▶</span>
+    </div>
+    <div id="prevMatchesSection" style="display:${prevMatchesOpen?'block':'none'}">`;
+
     const byDate={};const dateOrder=[];
-    sorted.forEach(m=>{
+    past.forEach(m=>{
       const d=new Date(m.utc).toLocaleDateString('en',{timeZone:selectedTZ,weekday:'short',month:'long',day:'numeric',year:'numeric'});
       if(!byDate[d]){byDate[d]=[];dateOrder.push(d);}
       byDate[d].push(m);
     });
     dateOrder.forEach(d=>{
       html+=`<div class="date-divider">📅 ${d}<span class="stage-count" style="margin-left:8px">${byDate[d].length}</span></div>`;
-      html+=`<div class="matches-list">${byDate[d].map(makeCard).join('')}</div>`;
+      html+=`<div class="matches-list">${byDate[d].map(makePastCard).join('')}</div>`;
     });
-  } else {
-    const byStage={};
-    ms.forEach(m=>{if(!byStage[m.stage])byStage[m.stage]=[];byStage[m.stage].push(m);});
-    Object.keys(byStage).sort((a,b)=>stageOrd(a)-stageOrd(b)).forEach(s=>{
-      html+=`<div class="stage-divider">${stageIcon(s)} ${s}<span class="stage-count">${byStage[s].length}</span></div>`;
-      html+=`<div class="matches-list">${byStage[s].map(makeCard).join('')}</div>`;
-    });
+    html+=`</div>`;
   }
+
   document.getElementById('fixturesList').innerHTML=html;
+
+  // Scroll to today on first load
+  setTimeout(()=>{
+    const el=document.getElementById('today-anchor');
+    if(el)el.scrollIntoView({behavior:'smooth',block:'start'});
+  },150);
 }
 
 // ══════════ LIVE ══════════════════════════════════════════
@@ -2414,6 +2518,8 @@ function renderTVPlaylistChannels(channels) {
   if(vg)vg.classList.toggle('active',vm==='group');
   buildDropdowns();initLiveTV();renderFixtures();updateClock();updateCD();
   setInterval(()=>{updateClock();updateCD();},1000);
+  // Auto-refresh fixtures every 60s to move finished matches to previous section
+  setInterval(()=>{ if(curTab==='fixtures') renderFixtures(); },60000);
   document.getElementById('pollModal').addEventListener('click',e=>{if(e.target===e.currentTarget)closePoll();});
   document.getElementById('bkPickerModal').addEventListener('click',e=>{if(e.target===e.currentTarget)bkClosePicker();});
   document.getElementById('todayMatchModal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeTodayMatches();});
