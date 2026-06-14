@@ -4,10 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>⚽ FIFA World Cup 2026 | BD Time</title>
-<link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css" />
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="lib/plyr.css" />
+<!-- DNS/TLS preconnect — warm the default channel host + most-used CDNs for a fast first segment -->
+<link rel="preconnect" href="https://bein-xtra-bein.amagi.tv" crossorigin>
+<link rel="preconnect" href="https://owrcovcrpy.gpcdn.net" crossorigin>
+<link rel="dns-prefetch" href="https://bein-xtra-bein.amagi.tv">
+<link rel="dns-prefetch" href="https://owrcovcrpy.gpcdn.net">
+<link rel="dns-prefetch" href="https://stream-lb.livemediama.com">
+<link rel="dns-prefetch" href="https://d3qs3d2rkhfqrt.cloudfront.net">
+<link rel="dns-prefetch" href="https://amg26268-amg26268c14-freelivesports-emea-10267.playouts.now.amagi.tv">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
@@ -35,7 +40,7 @@
 html{scroll-behavior:smooth}
 body{
   background:var(--bg0);color:var(--t1);
-  font-family:'Inter',system-ui,sans-serif;
+  font-family:system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
   min-height:100vh;
   background-image:
     radial-gradient(ellipse 80% 50% at 20% -10%,rgba(79,172,254,0.07) 0%,transparent 60%),
@@ -778,6 +783,22 @@ select option{background:#0d1a2e;color:#fff}
 .tv-player-wrapper:hover {
   box-shadow: 0 28px 72px rgba(0,0,0,0.85), 0 0 0 1px rgba(255,215,0,0.15), 0 0 70px rgba(255,215,0,0.08);
 }
+/* Loading spinner overlay (shown while a channel is connecting / buffering) */
+.tv-spinner-overlay {
+  position: absolute; inset: 0; z-index: 9;
+  display: none; align-items: center; justify-content: center;
+  background: radial-gradient(circle at center, rgba(0,0,0,0.55), rgba(0,0,0,0.78));
+  pointer-events: none;
+}
+.tv-spinner-overlay.active { display: flex; }
+.tv-spinner {
+  width: 38px; height: 38px; border-radius: 50%;
+  border: 3px solid rgba(255,255,255,0.15);
+  border-top-color: var(--gold);
+  animation: tvspin 0.8s linear infinite;
+  box-shadow: 0 0 18px rgba(245,197,24,0.35);
+}
+@keyframes tvspin { to { transform: rotate(360deg); } }
 .tv-info-overlay {
   position: absolute;
   top: 12px;
@@ -1066,6 +1087,13 @@ select option{background:#0d1a2e;color:#fff}
   border-color: rgba(245,197,24,0.4);
   color: var(--gold);
 }
+.tv-channel-icon img {
+  width: 100%; height: 100%;
+  object-fit: contain;
+  border-radius: 7px;
+  background: rgba(255,255,255,0.92);
+  padding: 2px;
+}
 .tv-channel-info {
   display: flex;
   flex-direction: column;
@@ -1210,6 +1238,15 @@ select option{background:#0d1a2e;color:#fff}
     grid-template-columns: 1fr;
   }
 }
+/* (8) Keep the player pinned flush under the sticky header while scrolling the channel list */
+@media(min-width: 993px) {
+  .tv-player-col { align-self: start; }
+  .tv-player-wrapper {
+    position: sticky;
+    top: 62px;               /* == sticky header height, so no sliver shows between */
+    z-index: 5;
+  }
+}
 </style>
 </head>
 <body>
@@ -1297,6 +1334,9 @@ select option{background:#0d1a2e;color:#fff}
           <button class="tv-pip-overlay-btn" id="tvPipBtn" title="Picture in Picture">
             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 11h-8v6h8v-6zm4 8V4.98C23 3.88 22.1 3 21 3H3c-1.1 0-2 .88-2 1.98V19c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2zm-2 .02H3V4.97h18v14.05z"/></svg>
           </button>
+
+          <!-- Loading spinner overlay -->
+          <div id="tv-spinner" class="tv-spinner-overlay"><div class="tv-spinner"></div></div>
 
           <!-- Plyr Player Container -->
           <div id="tv-plyr-container">
@@ -1465,9 +1505,9 @@ select option{background:#0d1a2e;color:#fff}
   </div>
 </div>
 
-<script src="https://cdn.plyr.io/3.7.8/plyr.polyfilled.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.16.3/shaka-player.compiled.js"></script>
+<script src="lib/plyr.polyfilled.js"></script>
+<script src="lib/hls.min.js"></script>
+<!-- shaka-player is lazy-loaded on first DASH/DRM channel (see ensureShaka) -->
 <script>
 // ══════════ DATA ══════════════════════════════════════════
 const TIMEZONES=[
@@ -2304,14 +2344,16 @@ const tvPresetChannels = [
   { id: 'wc5', cat: 'sports', title: '⭐ Telemundo ES (WC)', type: 'dash', url: 'https://live-oneapp-prd-news.akamaized.net/Content/CMAF_OL2-CTR-4s/Live/channel(WSNS)/master.mpd', key: '7d6bb9f86e133e4cb33440b493b6b672:584ad285dcb9e7d42cf3e93f1cc3fe11', info: 'VERIFIED — Telemundo Chicago WC (ad-free)' },
   { id: 'wc6', cat: 'sports', title: '⭐ Tundra ES (WC)', type: 'dash', url: 'https://otte.live.fly.ww.aiv-cdn.net/gru-nitro/live/clients/dash/enc/8u9cregwlt/out/v1/687f6b2a559943549be271504a948ffd/cenc.mpd', key: '1710ac2bbfcd3032d0f6533850968f47:d2548dacc8efcd1cd0af0373060c82dc', info: 'VERIFIED — Spanish WC coverage (ad-free)' },
   { id: 'wc7', cat: 'sports', title: '⭐ M6 (France — WC)', type: 'dash', url: 'https://origin-m6web.live.6cloud.fr/out/v1/6play/6play-m6/cmaf_cenc00/dash-short-hd.mpd', key: '433ffba670963e70857859a9dff4be04:51ede3a821229fe81e71282c8eff80e3', info: 'VERIFIED — M6 France WC (ad-free)' },
+  // — World Cup football channels first —
   { id: 'sp1',  cat: 'sports', title: '✅ beIN XTRA (Live Football)', type: 'hls', url: 'https://bein-xtra-bein.amagi.tv/playlist.m3u8', info: 'VERIFIED — beIN free live football, works everywhere' },
   { id: 'sp2',  cat: 'sports', title: '✅ Arryadia (Morocco — Live)', type: 'hls', url: 'https://stream-lb.livemediama.com/arryadia/hls/master.m3u8', info: 'VERIFIED — Morocco TV, live WC match coverage' },
   { id: 'sp3',  cat: 'sports', title: '🏆 T Sports (BD — WC Official)', type: 'hls', url: 'https://tvsen7.aynaott.com/tsports-hd/index.m3u8', info: 'All 104 matches — works from a BD connection' },
+  { id: 'sp7',  cat: 'sports', title: '⚽ CazeTV (Brazil) 1080p', type: 'hls', url: 'https://dfr80qz435crc.cloudfront.net/MNOP/Amagi/Caze/Caze_TV_BR/1080p-vtt/index.m3u8', info: 'Brazil football channel — 1080p HD' },
+  { id: 'sp8',  cat: 'sports', title: '⚽ TYC Sports (Argentina)', type: 'hls', url: 'https://amg26268-amg26268c14-freelivesports-emea-10267.playouts.now.amagi.tv/ts-us-e2-n2/playlist/amg26268-sportsstudio-tycsports-freelivesportsemea/playlist.m3u8', info: 'VERIFIED — Argentina sports, Spanish WC coverage' },
+  // — general sports —
   { id: 'sp4',  cat: 'sports', title: '⚽ DD Sports (India)', type: 'hls', url: 'https://d3qs3d2rkhfqrt.cloudfront.net/out/v1/b17adfe543354fdd8d189b110617cddd/index.m3u8', info: 'India public sports broadcast' },
   { id: 'sp5',  cat: 'sports', title: '⚽ ESPN8 The Ocho', type: 'hls', url: 'https://d3b6q2ou5kp8ke.cloudfront.net/ESPNTheOcho.m3u8', info: 'ESPN free sports channel — 1080p' },
   { id: 'sp6',  cat: 'sports', title: '🏏 Cricket Gold', type: 'hls', url: 'https://streams2.sofast.tv/ptnr-yupptv/title-cricketgold/v1/master/611d79b11b77e2f571934fd80ca1413453772ac7/b2048bb8-1686-4432-aa50-647245383e0c/manifest.m3u8', info: 'Classic cricket 24/7' },
-  { id: 'sp7',  cat: 'sports', title: '⚽ CazeTV (Brazil) 1080p', type: 'hls', url: 'https://dfr80qz435crc.cloudfront.net/MNOP/Amagi/Caze/Caze_TV_BR/1080p-vtt/index.m3u8', info: 'Brazil football channel — 1080p HD' },
-  { id: 'sp8',  cat: 'sports', title: '⚽ TYC Sports (Argentina)', type: 'hls', url: 'https://amg26268-amg26268c14-freelivesports-emea-10267.playouts.now.amagi.tv/ts-us-e2-n2/playlist/amg26268-sportsstudio-tycsports-freelivesportsemea/playlist.m3u8', info: 'VERIFIED — Argentina sports, Spanish WC coverage' },
   { id: 'sp9',  cat: 'sports', title: '📺 FIFA+ Channel (replays)', type: 'hls', url: 'https://a62dad94.wurl.com/master/f36d25e7e52f1ba8d7e56eb859c636563214f541/UmFrdXRlblRWLWV1X0ZJRkFQbHVzRW5nbGlzaF9ITFM/playlist.m3u8', info: 'FIFA shows, classics & docs — NOT the live match feed' },
 
   // ═══════════ 📰 NEWS ═══════════ (BD via gpcdn — all verified playing globally)
@@ -2365,6 +2407,58 @@ let tvActiveCat = 'all';
 let tvSavedStreams = [];
 let tvLoadedPlaylist = [];
 
+// (9) Verified channel logos (iptv-org / Wikimedia). Missing → emoji fallback.
+const TV_LOGO_BY_ID = {
+  wc1:'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0c/FOX_Sports_logo.svg/960px-FOX_Sports_logo.svg.png',
+  wc4:'https://upload.wikimedia.org/wikipedia/commons/thumb/6/68/Telemundo_logo_2018.svg/960px-Telemundo_logo_2018.svg.png',
+  wc5:'https://upload.wikimedia.org/wikipedia/commons/thumb/6/68/Telemundo_logo_2018.svg/960px-Telemundo_logo_2018.svg.png',
+  wc7:'https://i.imgur.com/7GVp3fW.png',
+  sp1:'https://i.imgur.com/uJosqHh.png',
+  sp2:'https://i.imgur.com/XjzK3gZ.png',
+  sp3:'https://i.imgur.com/2JzlorD.png',
+  sp4:'https://i.imgur.com/J2Ky5OO.png',
+  sp5:'https://upload.wikimedia.org/wikipedia/commons/thumb/2/2f/ESPN_wordmark.svg/960px-ESPN_wordmark.svg.png',
+  sp7:'https://upload.wikimedia.org/wikipedia/en/thumb/6/64/Caz%C3%A9TV_logo.svg/1280px-Caz%C3%A9TV_logo.svg.png',
+  sp8:'https://upload.wikimedia.org/wikipedia/commons/thumb/5/54/TyC_Sports_logo.svg/960px-TyC_Sports_logo.svg.png',
+  sp9:'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9c/FIFA%2B_(2025).svg/960px-FIFA%2B_(2025).svg.png',
+  nw1:'https://i.imgur.com/i54AQic.png',
+  nw3:'https://i.imgur.com/4JLkaF7.png',
+  nw4:'https://i.imgur.com/POXFhGN.png',
+  nw5:'https://i.imgur.com/4qZQKjo.png',
+  nw6:'https://i.imgur.com/zoLwwUK.png',
+  nw8:'https://i.imgur.com/Qbt6q4z.png',
+  nw9:'https://upload.wikimedia.org/wikipedia/en/thumb/d/d5/Star_News_Bangladesh_Logo.svg/1280px-Star_News_Bangladesh_Logo.svg.png',
+  nw10:'https://i.imgur.com/jkouxLg.png',
+  nw11:'https://i.imgur.com/7bRVpnu.png',
+  nw12:'https://i.imgur.com/8MRNFb9.png',
+  nw13:'https://upload.wikimedia.org/wikipedia/commons/thumb/8/81/CGTN.svg/960px-CGTN.svg.png',
+  nw14:'https://i.imgur.com/JYLmXy4.png',
+  nw15:'https://i.imgur.com/koFYddE.png',
+  nw16:'https://i.imgur.com/ztn2IR8.png',
+  en1:'https://i.imgur.com/l75bDTx.png',
+  en2:'https://i.imgur.com/X0JJlOX.png',
+  en3:'https://i.imgur.com/uVZJMed.png',
+  en4:'https://i.imgur.com/F62GUqS.png',
+  en5:'https://i.imgur.com/nCWgp38.png',
+  en6:'https://i.imgur.com/5OE2FDt.png',
+  en7:'https://i.imgur.com/tL9kxxB.png',
+  en8:'https://i.imgur.com/Xf5YuoE.png',
+  en9:'https://www.jagobd.com/wp-content/uploads/2016/02/atnislamictv.jpg?x50681',
+  en10:'https://i.imgur.com/K1HmMRz.png',
+  en11:'https://i.imgur.com/gxL05Y4.png',
+  en12:'https://i.imgur.com/k2adSjA.png',
+  en13:'https://i.imgur.com/gXsddRK.png',
+  en14:'https://i.imgur.com/MohlE5B.png',
+  en15:'https://i.imgur.com/fjgzW20.png'
+};
+function tvIconHTML(ch) {
+  const logo = ch.logo || TV_LOGO_BY_ID[ch.id];
+  const fb = ch.type === 'iframe' ? '↗' : '📺';
+  return logo
+    ? `<img src="${logo}" alt="" loading="lazy" onerror="this.style.display='none';this.parentElement.textContent='${fb}'">`
+    : fb;
+}
+
 function initLiveTV() {
   // Initialize Plyr
   tvPlayer = new Plyr('#tv-player', {
@@ -2372,10 +2466,15 @@ function initLiveTV() {
     settings: ['quality', 'speed', 'loop'],
     fullscreen: { enabled: true, fallback: true, iosNative: true },
     tooltips: { controls: true, seek: true },
-    invertTime: false
+    invertTime: false,
+    iconUrl: 'lib/plyr.svg'
   });
 
   const tvVideoEl = document.getElementById('tv-player');
+
+  // ── Spinner: hide when video is actually playing, show again on buffering ──
+  ['playing', 'canplay'].forEach(ev => tvVideoEl.addEventListener(ev, () => tvShowSpinner(false)));
+  ['waiting', 'stalled'].forEach(ev => tvVideoEl.addEventListener(ev, () => tvShowSpinner(true)));
 
   // ── Landscape lock via native fullscreenchange (works on all browsers) ──
   function onFSChange() {
@@ -2509,12 +2608,94 @@ function initLiveTV() {
   renderTVPresets();
   renderTVSavedChannels();
 
-  // Auto-play the first (selected) channel instead of a test stream
-  const firstCh = tvPresetChannels[0];
-  if (firstCh) playLiveTVStream(firstCh.type, firstCh.url, firstCh.title, firstCh.key);
+  // ── (6) Resume last-watched channel; else default to first HLS channel (fast start) ──
+  let resume = null;
+  try { resume = JSON.parse(localStorage.getItem('wc2026_last_tv') || 'null'); } catch(e) {}
+  let startCh = null;
+  if (resume && resume.url) {
+    startCh = tvPresetChannels.find(c => c.url === resume.url) || resume;
+  }
+  if (!startCh) startCh = tvPresetChannels.find(c => c.type === 'hls') || tvPresetChannels[0];
+  if (startCh) {
+    playLiveTVStream(startCh.type, startCh.url, startCh.title, startCh.key);
+    tvHighlightActive(startCh.url);
+  }
+}
+
+// Highlight the channel item matching a given url as active
+function tvHighlightActive(url) {
+  document.querySelectorAll('.tv-channel-item').forEach(el => {
+    el.classList.toggle('active', el.getAttribute('data-url') === url);
+  });
+}
+
+// ── playback helpers (fast start / spinner / lazy shaka / resume / prefetch) ──
+let tvPlayToken = 0;          // guards against a slow async load overriding a newer channel
+let _fastPlayTimer = null;
+let _spinnerSafety = null;
+let _shakaLoadingPromise = null;
+
+// (2) Guarantee instant autoplay: try with sound; if blocked, mute → play → unmute
+function fastPlay(video) {
+  const p = video.play();
+  if (p && p.catch) {
+    p.catch(() => {
+      video.muted = true;
+      video.play().then(() => {
+        clearTimeout(_fastPlayTimer);
+        _fastPlayTimer = setTimeout(() => { try { video.muted = false; } catch(e){} }, 300);
+      }).catch(() => {});
+    });
+  }
+}
+
+// (3) Spinner overlay control
+function tvShowSpinner(show) {
+  const sp = document.getElementById('tv-spinner');
+  if (sp) sp.classList.toggle('active', !!show);
+  if (show) {
+    clearTimeout(_spinnerSafety);
+    _spinnerSafety = setTimeout(() => { const s = document.getElementById('tv-spinner'); if (s) s.classList.remove('active'); }, 25000);
+  }
+}
+
+// (4) Lazy-load shaka only when a DASH/DRM channel is first selected
+function ensureShaka() {
+  if (window.shaka) return Promise.resolve();
+  if (_shakaLoadingPromise) return _shakaLoadingPromise;
+  _shakaLoadingPromise = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'lib/shaka-player.compiled.js';
+    s.onload = () => resolve();
+    s.onerror = () => { _shakaLoadingPromise = null; reject(new Error('shaka load failed')); };
+    document.head.appendChild(s);
+  });
+  return _shakaLoadingPromise;
+}
+
+// (6) Persist the last-watched channel
+function tvSaveLastWatched(type, url, title, key) {
+  try { localStorage.setItem('wc2026_last_tv', JSON.stringify({ type, url, title, key })); } catch(e) {}
+}
+
+// (7) Warm DNS/connection for the next few HLS channels so switching is near-instant
+function tvPrefetchNeighbours(currentUrl, token) {
+  setTimeout(() => {
+    if (token !== tvPlayToken) return;                 // user already switched away
+    const idx = tvPresetChannels.findIndex(c => c.url === currentUrl);
+    if (idx < 0) return;
+    let warmed = 0;
+    for (let i = idx + 1; i < tvPresetChannels.length && warmed < 3; i++) {
+      const c = tvPresetChannels[i];
+      if (c.type !== 'hls') continue;
+      warmed++;
+      try { fetch(c.url, { mode: 'no-cors', cache: 'no-store' }).catch(() => {}); } catch(e) {}
+    }
+  }, 4000);
 }
 
 function playLiveTVStream(type, url, title, key) {
+  const myToken = ++tvPlayToken;                        // (7) claim this playback
   const plyrContainer = document.getElementById('tv-plyr-container');
   const iframeContainer = document.getElementById('tv-iframe-container');
   const iframe = document.getElementById('tv-iframe-player');
@@ -2522,17 +2703,13 @@ function playLiveTVStream(type, url, title, key) {
   const titleEl = document.getElementById('tv-playing-title');
 
   if (titleEl) titleEl.innerText = title;
+  tvShowSpinner(true);                                  // (3) spinner the instant we switch
+  tvSaveLastWatched(type, url, title, key);             // (6) remember last channel
 
   // Clean instances
-  if (tvHls) {
-    tvHls.destroy();
-    tvHls = null;
-  }
-  if (tvShaka) {
-    try { tvShaka.destroy(); } catch(e) {}
-    tvShaka = null;
-  }
-  url = url.trim();
+  if (tvHls) { tvHls.destroy(); tvHls = null; }
+  if (tvShaka) { try { tvShaka.destroy(); } catch(e) {} tvShaka = null; }
+  url = (url || '').trim();
 
   // Update LIVE badge & PiP visibility based on stream type
   tvIsHLS = (type === 'hls' || type === 'mp4' || type === 'dash');
@@ -2553,57 +2730,47 @@ function playLiveTVStream(type, url, title, key) {
     if (Hls.isSupported()) {
       tvHls = new Hls({
         enableWorker: true,
-        lowLatencyMode: false,                 // OFF — LL mode shrinks buffer & causes stalls
-        // ── DEEP forward buffer (maxBufferSize in bytes is the real limiter) ──
-        maxBufferLength: 60,                   // target 60s ahead
-        maxMaxBufferLength: 600,               // allow large growth (byte cap governs)
-        maxBufferSize: 200 * 1000 * 1000,      // 200 MB cached — trade memory for smoothness
-        maxBufferHole: 0.5,                    // tolerate small gaps instead of stalling
-        backBufferLength: Infinity,            // keep back buffer (DVR/seek-back)
-        frontBufferFlushThreshold: Infinity,   // never flush forward buffer
-        // ── Start at high quality, fast ──
-        startLevel: -1,
-        startFragPrefetch: true,               // prefetch first fragment → faster start
-        testBandwidth: false,                  // skip low-q probe (we start high)
-        abrEwmaDefaultEstimate: 5000000,       // 5 Mbps guess → begins in high quality
-        // ── ABR biased to high quality (keeps auto fallback on real drops) ──
-        abrBandWidthFactor: 1.0,               // use near-full measured bandwidth
-        abrBandWidthUpFactor: 0.9,             // up-switch with a small margin
-        abrEwmaFastLive: 4.0,                  // smooth transient bandwidth dips
-        abrMaxWithRealBitrate: true,           // select by real measured bitrate
-        maxStarvationDelay: 8,                 // tolerate risk, stay high
-        maxLoadingDelay: 8,
-        capLevelToPlayerSize: false,           // don't limit quality to element size
-        capLevelOnFPSDrop: false,
-        autoLevelCapping: -1,                  // no quality ceiling
-        // ── Live edge: sit back, never force a catch-up seek ──
-        liveSyncDurationCount: 6,              // sit further back = more headroom
-        liveMaxLatencyDurationCount: Infinity, // never force a forward seek
+        lowLatencyMode: false,
+        // ── (1) FAST START: begin at the lowest rendition → first frame almost instantly ──
+        startLevel: 0,
+        autoStartLoad: true,
+        startFragPrefetch: true,
+        testBandwidth: false,
+        // ── climb to top quality fast ──
+        abrEwmaDefaultEstimate: 60000000,
+        abrBandWidthFactor: 1.0,
+        abrBandWidthUpFactor: 0.95,
+        abrEwmaFastLive: 3.0,
+        abrMaxWithRealBitrate: true,
+        capLevelToPlayerSize: false,
+        autoLevelCapping: -1,
+        maxStarvationDelay: 6,
+        maxLoadingDelay: 6,
+        // ── deep buffer for smoothness ──
+        maxBufferLength: 30,
+        maxMaxBufferLength: 900,
+        maxBufferSize: 400 * 1000 * 1000,
+        maxBufferHole: 0.5,
+        backBufferLength: 60,
+        highBufferWatchdogPeriod: 1,
+        nudgeMaxRetry: 10,
+        appendErrorMaxRetry: 6,
+        // ── live ──
+        liveSyncDurationCount: 3,
+        liveMaxLatencyDurationCount: Infinity,
         liveDurationInfinity: true,
-        // ── Stall / error resilience ──
-        nudgeMaxRetry: 8,
-        highBufferWatchdogPeriod: 2,
-        appendErrorMaxRetry: 5,
-        fragLoadPolicy: { default: {
-          maxTimeToFirstByteMs: 10000, maxLoadTimeMs: 120000,
-          timeoutRetry: { maxNumRetry: 6, retryDelayMs: 0,   maxRetryDelayMs: 0,    backoff: 'linear' },
-          errorRetry:   { maxNumRetry: 8, retryDelayMs: 500, maxRetryDelayMs: 4000, backoff: 'linear' }
-        }},
-        playlistLoadPolicy: { default: {
-          maxTimeToFirstByteMs: 10000, maxLoadTimeMs: 20000,
-          timeoutRetry: { maxNumRetry: 4, retryDelayMs: 0,   maxRetryDelayMs: 0 },
-          errorRetry:   { maxNumRetry: 4, retryDelayMs: 500, maxRetryDelayMs: 4000 }
-        }}
+        // ── retries ──
+        fragLoadingMaxRetry: 8,
+        manifestLoadingMaxRetry: 6,
+        levelLoadingMaxRetry: 6
       });
       tvHls.loadSource(url);
       tvHls.attachMedia(video);
-      tvHls.on(Hls.Events.MANIFEST_PARSED, () => {
-        video.play().catch(e => {});
-      });
-      // Auto-recover from fatal errors instead of freezing (rate-limited to avoid loops)
+      tvHls.on(Hls.Events.MANIFEST_PARSED, () => { if (myToken === tvPlayToken) fastPlay(video); });
+      // Auto-recover from fatal errors instead of freezing (media recover rate-limited to 3s)
       let _lastMediaRecover = 0;
       tvHls.on(Hls.Events.ERROR, (evt, data) => {
-        if (!data.fatal) return;             // non-fatal: hls.js retries itself
+        if (!data.fatal) return;
         if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
           tvHls.startLoad();
         } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
@@ -2613,61 +2780,52 @@ function playLiveTVStream(type, url, title, key) {
       });
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
       video.src = url;
-      video.addEventListener('loadedmetadata', () => {
-        video.play().catch(e => {});
-      });
+      video.addEventListener('loadedmetadata', () => { if (myToken === tvPlayToken) fastPlay(video); }, { once: true });
     } else {
       alert("HLS is not supported in your browser.");
     }
+    tvPrefetchNeighbours(url, myToken);                 // (7) warm next channels
   }
   else if (type === 'dash') {
-    // DRM ClearKey DASH — played via Shaka Player (ad-free, direct in our player)
+    // DRM ClearKey DASH — played via lazy-loaded Shaka Player (ad-free, in our own player)
     plyrContainer.classList.remove('tv-hidden');
     iframeContainer.classList.add('tv-hidden');
     iframe.src = '';
-    if (typeof shaka === 'undefined' || !shaka.Player.isBrowserSupported()) {
-      alert('This channel needs a modern browser (Shaka Player).');
-      return;
-    }
-    // key format "kid:key"
-    const [kid, ck] = (key || '').split(':');
-    try { shaka.polyfill.installAll(); } catch(e) {}
-    tvShaka = new shaka.Player();
-    tvShaka.attach(video).then(() => {
-      const cfg = {
-        streaming: {
-          bufferingGoal: 60,         // 60s buffered ahead → smooth, no stalls
-          rebufferingGoal: 3,        // resume with a margin (must be < bufferingGoal)
-          bufferBehind: 60,          // keep back buffer for seek-back
-          segmentPrefetchLimit: 4,   // fetch 4 segments ahead — primary anti-stall
-          stallEnabled: true,
-          stallThreshold: 1,
-          stallSkip: 0.1,
-          gapDetectionThreshold: 0.1,// jump tiny gaps quickly
-          retryParameters: {
-            maxAttempts: 6, baseDelay: 300, backoffFactor: 1.5, fuzzFactor: 0.5,
-            timeout: 12000, stallTimeout: 2500, connectionTimeout: 4000
+    ensureShaka().then(() => {
+      if (myToken !== tvPlayToken) return;              // user switched while shaka loaded
+      if (!shaka.Player.isBrowserSupported()) { alert('This channel needs a modern browser.'); return; }
+      const [kid, ck] = (key || '').split(':');
+      try { shaka.polyfill.installAll(); } catch(e) {}
+      tvShaka = new shaka.Player();
+      tvShaka.attach(video).then(() => {
+        if (myToken !== tvPlayToken) { try { tvShaka.destroy(); } catch(e){} return; }
+        const cfg = {
+          manifest: { dash: { ignoreMinBufferTime: true } },
+          streaming: {
+            bufferingGoal: 40, rebufferingGoal: 1.5, bufferBehind: 40, segmentPrefetchLimit: 8,
+            stallEnabled: true, stallThreshold: 1, stallSkip: 0.2, gapDetectionThreshold: 0.1,
+            retryParameters: {
+              maxAttempts: 8, baseDelay: 300, backoffFactor: 1.5, fuzzFactor: 0.5,
+              timeout: 12000, stallTimeout: 2500, connectionTimeout: 4000
+            }
+          },
+          abr: {
+            enabled: true, defaultBandwidthEstimate: 1200000,  // start LOW → small first segment → fast first frame
+            bandwidthUpgradeTarget: 0.85, bandwidthDowngradeTarget: 0.98, restrictToElementSize: false
           }
-        },
-        abr: {
-          enabled: true,                          // keep adaptivity as a safety net
-          defaultBandwidthEstimate: 100000000,    // 100 Mbps → start at top quality
-          bandwidthUpgradeTarget: 0.50,           // upgrade eagerly
-          bandwidthDowngradeTarget: 0.99          // cling to high quality
-        }
-      };
-      if (kid && ck) cfg.drm = { clearKeys: { [kid]: ck } };
-      tvShaka.configure(cfg);
-      // Auto-retry on recoverable streaming errors instead of freezing
-      tvShaka.addEventListener('error', (e) => {
-        const code = e.detail && e.detail.code;
-        if (code === 1001 || code === 1002 || code === 1003 || (code >= 3000 && code < 4000)) {
-          setTimeout(() => { try { tvShaka.load(url).then(()=>video.play().catch(()=>{})); } catch(_){} }, 1500);
-        }
+        };
+        if (kid && ck) cfg.drm = { clearKeys: { [kid]: ck } };
+        tvShaka.configure(cfg);
+        tvShaka.addEventListener('error', (e) => {
+          const code = e.detail && e.detail.code;
+          if (code === 1001 || code === 1002 || code === 1003 || (code >= 3000 && code < 4000)) {
+            setTimeout(() => { if (myToken === tvPlayToken) { try { tvShaka.load(url).then(()=>fastPlay(video)); } catch(_){} } }, 1500);
+          }
+        });
+        tvShaka.load(url).then(() => { if (myToken === tvPlayToken) fastPlay(video); })
+          .catch(err => { console.warn('Shaka load error', err); });
       });
-      tvShaka.load(url).then(() => { video.play().catch(e => {}); })
-        .catch(err => { console.warn('Shaka load error', err); });
-    });
+    }).catch(err => { console.warn(err); tvShowSpinner(false); alert('Could not load the DRM player.'); });
   }
   else if (type === 'iframe') {
     plyrContainer.classList.add('tv-hidden');
@@ -2678,9 +2836,8 @@ function playLiveTVStream(type, url, title, key) {
       const match = url.match(/src=["']([^"']+)["']/i);
       if (match && match[1]) finalUrl = match[1];
     }
-
-    // Sandbox to block advertising popups and redirections
     iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-presentation allow-forms allow-popups');
+    iframe.onload = () => tvShowSpinner(false);          // (3) hide spinner when iframe loads
     iframe.src = finalUrl;
     const newTabBtn = document.getElementById('tv-iframe-newtab');
     if (newTabBtn) newTabBtn.href = finalUrl;
@@ -2690,7 +2847,8 @@ function playLiveTVStream(type, url, title, key) {
     iframeContainer.classList.add('tv-hidden');
     iframe.src = '';
     video.src = url;
-    video.play().catch(e => {});
+    if (myToken === tvPlayToken) fastPlay(video);
+    tvPrefetchNeighbours(url, myToken);
   }
 }
 
@@ -2734,11 +2892,12 @@ function renderTVPresets() {
     chans.forEach(ch => {
       const item = document.createElement('div');
       item.className = 'tv-channel-item';
+      item.setAttribute('data-url', ch.url);
       const tag = (ch.type === 'hls' || ch.type === 'dash')
         ? '<span class="tv-ch-tag live">live</span>'
         : '<span class="tv-ch-tag portal">portal</span>';
       item.innerHTML = `
-        <div class="tv-channel-icon"><i class="fa-solid ${ch.type === 'iframe' ? 'fa-arrow-up-right-from-square' : 'fa-tower-broadcast'}"></i></div>
+        <div class="tv-channel-icon">${tvIconHTML(ch)}</div>
         <div class="tv-channel-info">
           <span class="tv-ch-name">${ch.title}</span>
           <span class="tv-ch-desc">${ch.info}</span>
@@ -2746,15 +2905,17 @@ function renderTVPresets() {
         ${tag}
       `;
       item.addEventListener('click', () => {
-        document.querySelectorAll('.tv-channel-item').forEach(el => el.classList.remove('active'));
-        item.classList.add('active');
+        tvHighlightActive(ch.url);
         playLiveTVStream(ch.type, ch.url, ch.title, ch.key);
       });
       list.appendChild(item);
       if (!firstItem) firstItem = item;
     });
   });
-  if (firstItem) firstItem.classList.add('active');
+  // keep the currently-playing channel highlighted across re-renders
+  let cur = null; try { cur = JSON.parse(localStorage.getItem('wc2026_last_tv')||'null'); } catch(e){}
+  if (cur && cur.url && list.querySelector(`[data-url="${CSS.escape(cur.url)}"]`)) tvHighlightActive(cur.url);
+  else if (firstItem) firstItem.classList.add('active');
 }
 
 function saveTVStream(title, type, url) {
@@ -2774,20 +2935,20 @@ function renderTVSavedChannels() {
   if (!list) return;
   list.innerHTML = '';
   if (tvSavedStreams.length === 0) {
-    list.innerHTML = '<div class="tv-empty-state"><i class="fa-regular fa-folder-open" style="font-size:16px; margin-bottom:5px; display:block;"></i> No saved custom streams yet.</div>';
+    list.innerHTML = '<div class="tv-empty-state"><span style="font-size:18px; margin-bottom:5px; display:block;">📂</span> No saved custom streams yet.</div>';
     return;
   }
   tvSavedStreams.forEach((ch, idx) => {
     const item = document.createElement('div');
     item.className = 'tv-channel-item';
     item.innerHTML = `
-      <div class="tv-channel-icon"><i class="fa-solid fa-bookmark" style="color:var(--gold);"></i></div>
+      <div class="tv-channel-icon">🔖</div>
       <div class="tv-channel-info">
         <span class="tv-ch-name">${ch.title}</span>
         <span class="tv-ch-desc">${ch.type.toUpperCase()} Stream</span>
       </div>
       <div class="tv-item-actions">
-        <button class="tv-delete-btn" data-idx="${idx}"><i class="fa-solid fa-trash-can"></i></button>
+        <button class="tv-delete-btn" data-idx="${idx}">🗑</button>
       </div>
     `;
     item.addEventListener('click', (e) => {
@@ -2831,7 +2992,7 @@ function parseM3U(text) {
 
 async function fetchM3UPlaylist(url) {
   const submitBtn = document.querySelector('#tv-m3u-form button[type="submit"]');
-  submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Parsing...';
+  submitBtn.innerHTML = '⏳ Parsing...';
   submitBtn.disabled = true;
 
   try {
@@ -2869,7 +3030,7 @@ function renderTVPlaylistChannels(channels) {
     const item = document.createElement('div');
     item.className = 'tv-channel-item';
     item.innerHTML = `
-      <div class="tv-channel-icon"><i class="fa-solid ${ch.type === 'hls' ? 'fa-bolt' : 'fa-link'}"></i></div>
+      <div class="tv-channel-icon">${ch.type === 'hls' ? '📺' : '🔗'}</div>
       <div class="tv-channel-info">
         <span class="tv-ch-name">${ch.title}</span>
         <span class="tv-ch-desc">${ch.group} · ${ch.type.toUpperCase()}</span>
