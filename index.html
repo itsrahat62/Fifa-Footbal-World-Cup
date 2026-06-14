@@ -571,6 +571,36 @@ select option{background:#0d1a2e;color:#fff}
 .no-results .nr-icon{font-size:44px;margin-bottom:12px}
 .no-results p{color:var(--t2);font-size:14px}
 
+/* ── Recent Results strip ── */
+.results-block{margin:2px 0 22px}
+.results-title{font-size:12px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--gold);margin:0 0 11px 2px}
+.results-strip{display:flex;gap:12px;overflow-x:auto;padding:2px 2px 10px;scroll-snap-type:x mandatory}
+.results-strip::-webkit-scrollbar{height:6px}
+.results-strip::-webkit-scrollbar-track{background:transparent}
+.results-strip::-webkit-scrollbar-thumb{background:rgba(245,197,24,0.3);border-radius:10px}
+.result-card{
+  flex:0 0 auto;width:200px;background:var(--glass);border:1px solid var(--border);
+  border-radius:14px;padding:12px 14px;cursor:pointer;scroll-snap-align:start;
+  transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease;
+}
+.result-card:hover{border-color:rgba(245,197,24,0.4);transform:translateY(-3px);box-shadow:0 10px 26px rgba(0,0,0,0.35)}
+.rc-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.rc-ft{font-size:9px;font-weight:800;color:#2ecc71;background:rgba(46,204,113,0.14);border:1px solid rgba(46,204,113,0.3);padding:2px 8px;border-radius:20px;letter-spacing:.5px}
+.rc-stage{font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:90px;text-align:right}
+.rc-row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:4px 0;color:var(--t2)}
+.rc-row.rc-win{color:var(--t1);font-weight:700}
+.rc-team{display:flex;align-items:center;gap:8px;min-width:0;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rc-flag{flex-shrink:0;display:flex;align-items:center}
+.rc-sc{font-size:16px;font-weight:800;font-variant-numeric:tabular-nums;flex-shrink:0}
+.rc-row.rc-win .rc-sc{color:var(--gold)}
+.rc-foot{font-size:9px;color:var(--t3);margin-top:9px;padding-top:8px;border-top:1px solid var(--border);text-align:center;letter-spacing:.3px}
+@media(max-width:768px){
+  .result-card{width:172px;padding:11px 12px;border-radius:12px}
+  .results-title{font-size:11px}
+  .rc-team{font-size:12px}
+  .rc-sc{font-size:15px}
+}
+
 /* ── LIGHT MODE OVERRIDES ── */
 [data-theme="light"] .mc{background:rgba(255,255,255,0.75);border-color:rgba(15,30,60,0.1)}
 [data-theme="light"] .mc:hover{border-color:rgba(180,140,0,0.4);box-shadow:0 8px 28px rgba(15,30,60,0.12)}
@@ -1897,11 +1927,36 @@ function togglePrevMatches(){
   if(icon)icon.classList.toggle('open',prevMatchesOpen);
 }
 
+// Premium "Recent Results" strip — latest finished matches (scores + winner). Respects a single-team filter.
+function recentResultsHTML(){
+  const ft=document.getElementById('filterTeam');
+  const team=ft?ft.value:'';
+  let done=MATCHES.filter(m=>m.hs!==undefined&&m.as!==undefined);
+  if(team) done=done.filter(m=>m.home===team||m.away===team);   // team selected → that team's results
+  done=done.sort((a,b)=>new Date(b.utc)-new Date(a.utc)).slice(0,12);
+  if(!done.length) return '';
+  const cards=done.map(m=>{
+    const h=TEAMS[m.home]||{},a=TEAMS[m.away]||{};
+    const hw=m.hs>m.as,aw=m.as>m.hs;
+    const d=new Date(m.utc).toLocaleDateString('en',{timeZone:selectedTZ,month:'short',day:'numeric'});
+    return `<div class="result-card" onclick="openPoll(${m.id})">
+      <div class="rc-top"><span class="rc-ft">● FT</span><span class="rc-stage">${m.stage}</span></div>
+      <div class="rc-row${hw?' rc-win':''}"><span class="rc-team"><span class="rc-flag">${fi(h.iso,22,3)}</span>${m.home}</span><span class="rc-sc">${m.hs}</span></div>
+      <div class="rc-row${aw?' rc-win':''}"><span class="rc-team"><span class="rc-flag">${fi(a.iso,22,3)}</span>${m.away}</span><span class="rc-sc">${m.as}</span></div>
+      <div class="rc-foot">${d}${hw?' · '+m.home+' won':aw?' · '+m.away+' won':' · Draw'}</div>
+    </div>`;
+  }).join('');
+  return `<div class="results-block">
+    <div class="results-title">🏁 Recent Results${team?' — '+team:''}</div>
+    <div class="results-strip">${cards}</div>
+  </div>`;
+}
+
 function renderFixtures(){
   const ms=filteredMatches();
   document.getElementById('matchCount').textContent=`${ms.length} match${ms.length!==1?'es':''}`;
   if(!ms.length){
-    document.getElementById('fixturesList').innerHTML=`<div class="no-results"><div class="nr-icon">🔍</div><p>No matches found</p></div>`;
+    document.getElementById('fixturesList').innerHTML=recentResultsHTML()+`<div class="no-results"><div class="nr-icon">🔍</div><p>No matches found</p></div>`;
     return;
   }
 
@@ -1910,7 +1965,7 @@ function renderFixtures(){
   const past=ms.filter(m=>!m.tbd&&new Date(m.utc).getTime()+matchEndMs<now).sort((a,b)=>new Date(b.utc)-new Date(a.utc));
   const upcoming=ms.filter(m=>m.tbd||new Date(m.utc).getTime()+matchEndMs>=now).sort((a,b)=>new Date(a.utc)-new Date(b.utc));
 
-  let html='';
+  let html=recentResultsHTML();   // premium results strip at the very top
 
   // ── Upcoming matches ──
   if(upcoming.length){
