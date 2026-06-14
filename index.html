@@ -498,6 +498,42 @@ select option{background:#0d1a2e;color:#fff}
 .modal-close:hover{background:rgba(255,255,255,0.1);color:#fff}
 .modal-close:hover{background:rgba(255,255,255,0.08);color:var(--t1)}
 
+/* ── Match Details modal (Google-style) ── */
+.md-modal{max-width:480px}
+.md-loading{display:flex;align-items:center;justify-content:center;min-height:160px}
+.md-comp{font-size:11px;color:rgba(255,255,255,0.5);text-align:center;letter-spacing:.4px;margin-bottom:14px}
+.md-score{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:14px}
+.md-team{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;min-width:0}
+.md-logo{width:48px;height:48px;object-fit:contain}
+.md-tn{font-size:13px;font-weight:700;color:#fff;text-align:center;line-height:1.2}
+.md-mid{display:flex;flex-direction:column;align-items:center;gap:6px;padding-top:6px}
+.md-sc{font-size:30px;font-weight:800;color:#fff;font-variant-numeric:tabular-nums;white-space:nowrap}
+.md-sc span{color:rgba(255,255,255,0.3);margin:0 4px}
+.md-status{font-size:10px;font-weight:800;letter-spacing:.5px;color:#2ecc71;background:rgba(46,204,113,0.14);border:1px solid rgba(46,204,113,0.3);padding:2px 9px;border-radius:20px;white-space:nowrap}
+.md-status.live{color:#ff5470;background:rgba(255,84,112,0.14);border-color:rgba(255,84,112,0.35)}
+.md-goals{display:flex;align-items:flex-start;gap:10px;padding:12px 4px;margin-bottom:6px;border-top:1px solid rgba(255,255,255,0.08);border-bottom:1px solid rgba(255,255,255,0.08)}
+.md-goals-col{flex:1;display:flex;flex-direction:column;gap:5px}
+.md-goals-col.right{align-items:flex-end;text-align:right}
+.md-goals-ball{font-size:14px;opacity:.6;align-self:center}
+.md-goal{font-size:12px;color:rgba(255,255,255,0.85);display:flex;gap:5px;align-items:center}
+.md-goal span{color:rgba(255,255,255,0.45);font-size:11px}
+.md-stats-title{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--gold);text-align:center;margin:16px 0 12px}
+.md-stat{margin-bottom:11px}
+.md-stat-top{display:flex;align-items:center;justify-content:space-between;font-size:12px;margin-bottom:5px}
+.md-sv{font-weight:700;color:rgba(255,255,255,0.5);min-width:42px}
+.md-stat-top .md-sv:last-child{text-align:right}
+.md-sv.hi{color:#fff}
+.md-sl{font-size:11px;color:rgba(255,255,255,0.55);text-transform:capitalize}
+.md-bar{display:flex;height:5px;border-radius:4px;overflow:hidden;background:rgba(255,255,255,0.06)}
+.md-bar-h{background:#4facfe;height:100%}
+.md-bar-a{background:#ff4d6d;height:100%}
+.md-nostats{font-size:12px;color:rgba(255,255,255,0.4);text-align:center;padding:14px 0}
+@media(max-width:768px){
+  .md-modal{max-width:100%}
+  .md-sc{font-size:26px}
+  .md-logo{width:42px;height:42px}
+}
+
 /* TODAY'S MATCHES POPUP */
 .tdm-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.78);z-index:550;
   display:none;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(10px)}
@@ -1535,6 +1571,14 @@ select option{background:#0d1a2e;color:#fff}
   </div>
 </div>
 
+<!-- Match details (Google-style: score, scorers, team stats) -->
+<div class="modal-overlay" id="matchDetailModal">
+  <div class="modal md-modal">
+    <div id="mdBody"><div class="md-loading"><div class="tv-spinner"></div></div></div>
+    <button class="modal-close" onclick="closeMatchDetails()">✕ Close</button>
+  </div>
+</div>
+
 <script src="lib/plyr.polyfilled.js"></script>
 <script src="lib/hls.min.js"></script>
 <!-- shaka-player is lazy-loaded on first DASH/DRM channel (see ensureShaka) -->
@@ -1893,7 +1937,7 @@ function makePastCard(m){
   const dt=toLocalDate(m.utc),t=toLocalTime(m.utc);
   const hasScore=m.hs!==undefined&&m.as!==undefined;
   const hw=hasScore&&m.hs>m.as,aw=hasScore&&m.as>m.hs;
-  return`<div class="mc mc-past" onclick="openPoll(${m.id})">
+  return`<div class="mc mc-past" onclick="openMatchDetails(${m.id})">
   <div class="mc-top">
     <span class="mc-stage">${m.stage}</span>
     <span class="mc-ft-badge">FT</span>
@@ -1939,7 +1983,7 @@ function recentResultsHTML(){
     const h=TEAMS[m.home]||{},a=TEAMS[m.away]||{};
     const hw=m.hs>m.as,aw=m.as>m.hs;
     const d=new Date(m.utc).toLocaleDateString('en',{timeZone:selectedTZ,month:'short',day:'numeric'});
-    return `<div class="result-card" onclick="openPoll(${m.id})">
+    return `<div class="result-card" onclick="openMatchDetails(${m.id})">
       <div class="rc-top"><span class="rc-ft">● FT</span><span class="rc-stage">${m.stage}</span></div>
       <div class="rc-row${hw?' rc-win':''}"><span class="rc-team"><span class="rc-flag">${fi(h.iso,22,3)}</span>${m.home}</span><span class="rc-sc">${m.hs}</span></div>
       <div class="rc-row${aw?' rc-win':''}"><span class="rc-team"><span class="rc-flag">${fi(a.iso,22,3)}</span>${m.away}</span><span class="rc-sc">${m.as}</span></div>
@@ -2058,13 +2102,14 @@ async function syncLiveScores(){
     (data.events||[]).forEach(ev=>{
       const comp=(ev.competitions||[])[0]; if(!comp) return;
       const state=ev.status&&ev.status.type&&ev.status.type.state;   // 'pre' | 'in' | 'post'
-      if(state!=='post') return;                                     // only count FINISHED matches
       const byKey={};
       (comp.competitors||[]).forEach(c=>{ const s=parseInt(c.score,10); byKey[_teamKey(c.team&&c.team.displayName)]=isNaN(s)?null:s; });
       MATCHES.forEach(m=>{
         const hk=_teamKey(m.home), ak=_teamKey(m.away);
-        if(byKey[hk]!=null && byKey[ak]!=null && (m.hs!==byKey[hk] || m.as!==byKey[ak])){
-          m.hs=byKey[hk]; m.as=byKey[ak]; changed=true;
+        if(!(hk in byKey) || !(ak in byKey)) return;                 // not this match
+        if(m.espnId!==ev.id) m.espnId=ev.id;                         // capture id for match details (any state)
+        if(state==='post' && byKey[hk]!=null && byKey[ak]!=null && (m.hs!==byKey[hk] || m.as!==byKey[ak])){
+          m.hs=byKey[hk]; m.as=byKey[ak]; changed=true;              // only count FINISHED matches in standings
         }
       });
     });
@@ -2317,6 +2362,80 @@ function castVote(ch){
   openPoll(curPoll);
 }
 function closePoll(){document.getElementById('pollModal').classList.remove('open');curPoll=null;}
+
+// ══════════ MATCH DETAILS (Google-style, from ESPN summary) ══════════
+let _mdEventId=null,_mdMatch=null,_mdTimer=null;
+const MD_STATS=[
+  ['totalShots','Shots'],['shotsOnTarget','Shots on Target'],['possessionPct','Possession %'],
+  ['totalPasses','Passes'],['__passacc','Pass Accuracy %'],['foulsCommitted','Fouls'],
+  ['yellowCards','Yellow Cards'],['redCards','Red Cards'],['offsides','Offsides'],['wonCorners','Corners']
+];
+function openMatchDetails(id){
+  const m=MATCHES.find(x=>x.id===id); if(!m) return;
+  // upcoming / no result → keep the prediction poll instead
+  if(!m.espnId || m.hs===undefined){ openPoll(id); return; }
+  _mdMatch=m; _mdEventId=m.espnId;
+  document.getElementById('mdBody').innerHTML='<div class="md-loading"><div class="tv-spinner"></div></div>';
+  document.getElementById('matchDetailModal').classList.add('open');
+  loadMatchDetails();
+  clearInterval(_mdTimer);
+  _mdTimer=setInterval(loadMatchDetails,30000);   // auto-refresh stats while open
+}
+async function loadMatchDetails(){
+  if(!_mdEventId) return;
+  try{
+    const r=await fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/summary?event='+_mdEventId,{cache:'no-store'});
+    if(!r.ok) return;
+    renderMatchDetails(await r.json());
+  }catch(e){ /* keep showing what we have */ }
+}
+function _statVal(team,name){ const s=((team||{}).statistics||[]).find(x=>x.name===name); return s?s.displayValue:null; }
+function renderMatchDetails(d){
+  const comp=d.header&&d.header.competitions&&d.header.competitions[0]; if(!comp) return;
+  const cs=comp.competitors||[];
+  const home=cs.find(c=>c.homeAway==='home')||cs[0], away=cs.find(c=>c.homeAway==='away')||cs[1];
+  if(!home||!away) return;
+  const st=comp.status&&comp.status.type||{};
+  const statusDetail=st.detail||st.shortDetail||'FT';
+  const isLive=st.state==='in';
+  const hLogo=(home.team.logos&&home.team.logos[0]&&home.team.logos[0].href)||home.team.logo||'';
+  const aLogo=(away.team.logos&&away.team.logos[0]&&away.team.logos[0].href)||away.team.logo||'';
+  const stage=(_mdMatch&&_mdMatch.stage)||'';
+  const goals=(d.keyEvents||[]).filter(e=>e.scoringPlay||(e.type&&e.type.text==='Goal'));
+  const goalLine=(teamId)=>goals.filter(g=>g.team&&String(g.team.id)===String(teamId)).map(g=>{
+    const who=(g.participants&&g.participants[0]&&g.participants[0].athlete&&g.participants[0].athlete.displayName)||(g.shortText||'Goal').replace(/ Goal$/,'');
+    const min=(g.clock&&g.clock.displayValue)||'';
+    const pen=/penalty/i.test(g.text||'')?' (P)':''; const og=/own goal/i.test(g.text||'')?' (OG)':'';
+    return `<div class="md-goal">⚽ ${who} <span>${min}${pen}${og}</span></div>`;
+  }).join('');
+  const bsTeams=(d.boxscore&&d.boxscore.teams)||[];
+  const findTeam=(tid)=>bsTeams.find(t=>t.team&&String(t.team.id)===String(tid))||{};
+  const hT=findTeam(home.team.id),aT=findTeam(away.team.id);
+  const passAcc=(t)=>{const ap=parseFloat(_statVal(t,'accuratePasses')),tp=parseFloat(_statVal(t,'totalPasses'));return(ap&&tp)?Math.round(ap/tp*100):null;};
+  let statsRows='';
+  MD_STATS.forEach(([key,label])=>{
+    let hv,av;
+    if(key==='__passacc'){ hv=passAcc(hT); av=passAcc(aT); } else { hv=_statVal(hT,key); av=_statVal(aT,key); }
+    if(hv==null&&av==null) return;
+    hv=hv==null?'0':String(hv); av=av==null?'0':String(av);
+    const hn=parseFloat(hv)||0,an=parseFloat(av)||0,tot=hn+an,hp=tot?Math.round(hn/tot*100):50;
+    statsRows+=`<div class="md-stat">
+      <div class="md-stat-top"><span class="md-sv ${hn>=an?'hi':''}">${hv}</span><span class="md-sl">${label}</span><span class="md-sv ${an>=hn?'hi':''}">${av}</span></div>
+      <div class="md-bar"><div class="md-bar-h" style="width:${hp}%"></div><div class="md-bar-a" style="width:${100-hp}%"></div></div>
+    </div>`;
+  });
+  document.getElementById('mdBody').innerHTML=`
+    <div class="md-comp">FIFA World Cup 2026 · ${stage}</div>
+    <div class="md-score">
+      <div class="md-team"><img class="md-logo" src="${hLogo}" onerror="this.style.display='none'" alt=""><div class="md-tn">${home.team.displayName}</div></div>
+      <div class="md-mid"><div class="md-sc">${home.score} <span>-</span> ${away.score}</div><div class="md-status ${isLive?'live':''}">${isLive?'🔴 '+statusDetail:statusDetail}</div></div>
+      <div class="md-team"><img class="md-logo" src="${aLogo}" onerror="this.style.display='none'" alt=""><div class="md-tn">${away.team.displayName}</div></div>
+    </div>
+    ${goals.length?`<div class="md-goals"><div class="md-goals-col">${goalLine(home.team.id)||''}</div><div class="md-goals-ball">⚽</div><div class="md-goals-col right">${goalLine(away.team.id)||''}</div></div>`:''}
+    ${statsRows?`<div class="md-stats-title">Team Stats</div>${statsRows}`:'<div class="md-nostats">Detailed stats not available for this match.</div>'}
+  `;
+}
+function closeMatchDetails(){ document.getElementById('matchDetailModal').classList.remove('open'); clearInterval(_mdTimer); _mdEventId=null; _mdMatch=null; }
 
 // ══════════ CALENDAR EXPORT ═══════════════════════════════
 function exportCalendar(){exportTeam(fTeam||'ALL');}
@@ -3156,7 +3275,8 @@ function renderTVPlaylistChannels(channels) {
   document.getElementById('pollModal').addEventListener('click',e=>{if(e.target===e.currentTarget)closePoll();});
   document.getElementById('bkPickerModal').addEventListener('click',e=>{if(e.target===e.currentTarget)bkClosePicker();});
   document.getElementById('todayMatchModal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeTodayMatches();});
-  document.addEventListener('keydown',e=>{if(e.key==='Escape'){closePoll();bkClosePicker();closeTodayMatches();}});
+  document.getElementById('matchDetailModal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeMatchDetails();});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'){closePoll();bkClosePicker();closeTodayMatches();closeMatchDetails();}});
   setTimeout(showTodayMatches,500);
 })();
 
