@@ -1985,6 +1985,41 @@ function renderLive(){
 
 // ══════════ GROUPS ════════════════════════════════════════
 
+// ── Auto-update scores from ESPN's free FIFA World Cup API (CORS-open, no key) ──
+// Fills hs/as on finished matches so the standings + fixtures update the moment a game ends.
+function _teamKey(n){
+  // NFD splits accents into combining marks; the [^a-z0-9] strip then removes them (Türkiye→turkiye, Curaçao→curacao)
+  let k=(n||'').toLowerCase().normalize('NFD').replace(/&/g,'and').replace(/[^a-z0-9]/g,'');
+  const alias={ unitedstates:'usa', bosniaherzegovina:'bosniaandherz', korearepublic:'southkorea',
+    irian:'iran', iranislamicrepublic:'iran', turkey:'turkiye', cotedivoire:'ivorycoast', czechrepublic:'czechia' };
+  return alias[k]||k;
+}
+async function syncLiveScores(){
+  try{
+    const r=await fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260611-20260712',{cache:'no-store'});
+    if(!r.ok) return;
+    const data=await r.json();
+    let changed=false;
+    (data.events||[]).forEach(ev=>{
+      const comp=(ev.competitions||[])[0]; if(!comp) return;
+      const state=ev.status&&ev.status.type&&ev.status.type.state;   // 'pre' | 'in' | 'post'
+      if(state!=='post') return;                                     // only count FINISHED matches
+      const byKey={};
+      (comp.competitors||[]).forEach(c=>{ const s=parseInt(c.score,10); byKey[_teamKey(c.team&&c.team.displayName)]=isNaN(s)?null:s; });
+      MATCHES.forEach(m=>{
+        const hk=_teamKey(m.home), ak=_teamKey(m.away);
+        if(byKey[hk]!=null && byKey[ak]!=null && (m.hs!==byKey[hk] || m.as!==byKey[ak])){
+          m.hs=byKey[hk]; m.as=byKey[ak]; changed=true;
+        }
+      });
+    });
+    if(changed && typeof curTab!=='undefined'){
+      if(curTab==='groups') renderGroups();
+      else if(curTab==='fixtures') renderFixtures();
+    }
+  }catch(e){ /* offline / blocked → keep existing scores */ }
+}
+
 function calcGroupStandings(g){
   const teams={};
   Object.entries(TEAMS).filter(([,t])=>t.group===g).forEach(([name,d])=>{
@@ -2308,7 +2343,7 @@ function showTab(tab,el){
 function renderCurrentTab(){
   if(curTab==='fixtures')renderFixtures();
   else if(curTab==='live')renderLive();
-  else if(curTab==='groups')renderGroups();
+  else if(curTab==='groups'){renderGroups();syncLiveScores();}   // refresh scores on open
   else if(curTab==='teams')renderTeams();
   else if(curTab==='stats')renderStats();
   else if(curTab==='bracket')bkInit();
@@ -3055,11 +3090,14 @@ function renderTVPlaylistChannels(channels) {
   if(vd)vd.classList.toggle('active',vm==='date');
   if(vg)vg.classList.toggle('active',vm==='group');
   buildDropdowns();initLiveTV();renderFixtures();updateClock();updateCD();
+  syncLiveScores();                                  // pull finished-match scores immediately
   setInterval(()=>{updateClock();updateCD();},1000);
   // Auto-refresh fixtures every 60s to move finished matches to previous section
   setInterval(()=>{ if(curTab==='fixtures') renderFixtures(); },60000);
   // Auto-refresh group standings every 60s
   setInterval(()=>{ if(curTab==='groups') renderGroups(); },60000);
+  // Pull live/finished scores from ESPN every 60s → standings + fixtures auto-update as games end
+  setInterval(syncLiveScores, 60000);
   document.getElementById('pollModal').addEventListener('click',e=>{if(e.target===e.currentTarget)closePoll();});
   document.getElementById('bkPickerModal').addEventListener('click',e=>{if(e.target===e.currentTarget)bkClosePicker();});
   document.getElementById('todayMatchModal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeTodayMatches();});
