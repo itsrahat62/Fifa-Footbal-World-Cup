@@ -528,6 +528,21 @@ select option{background:#0d1a2e;color:#fff}
 .md-bar-h{background:#4facfe;height:100%}
 .md-bar-a{background:#ff4d6d;height:100%}
 .md-nostats{font-size:12px;color:rgba(255,255,255,0.4);text-align:center;padding:14px 0}
+/* ── INLINE HIGHLIGHTS VIDEO ── */
+.md-hl-wrap{margin:14px 0 10px;border-radius:12px;overflow:hidden;background:#000;position:relative}
+.md-hl-wrap iframe{width:100%;aspect-ratio:16/9;border:none;border-radius:12px;display:block}
+.md-hl-btn{
+  display:inline-flex;align-items:center;gap:8px;cursor:pointer;
+  background:var(--gold3);border:1px solid rgba(245,197,24,0.35);
+  color:var(--gold);font-size:12px;font-weight:800;
+  padding:8px 18px;text-decoration:none;
+  border-radius:20px;transition:all 0.2s;
+  box-shadow:0 4px 12px rgba(245,197,24,0.15);
+  font-family:inherit;margin:0 auto;
+}
+.md-hl-btn:hover{background:rgba(245,197,24,0.18);border-color:rgba(245,197,24,0.5)}
+.md-hl-loading{display:flex;align-items:center;justify-content:center;padding:20px;color:var(--t3);font-size:12px;gap:8px}
+.md-hl-error{text-align:center;color:var(--t3);font-size:11px;padding:10px}
 @media(max-width:768px){
   .md-modal{max-width:100%}
   .md-sc{font-size:26px}
@@ -1853,9 +1868,12 @@ function makeCard(m){
     </div>
   </div>`:'';
 
+  const liveBadge = m.isLive ? `<span class="live-pill" style="margin-left:8px"><span class="live-dot"></span> LIVE</span>` : '';
+
   return`<div class="mc" onclick="openPoll(${m.id})">
   <div class="mc-top">
     <span class="mc-stage">${m.stage}</span>
+    ${liveBadge}
     <span class="mc-venue">📍 ${m.venue}, ${m.city}</span>
   </div>
   <div class="mc-body">
@@ -1864,8 +1882,13 @@ function makeCard(m){
       <div class="mc-name${m.home.length>10?' sm':''}">${m.home}</div>
     </div>
     <div class="mc-center">
-      <div class="mc-vs">VS</div>
-      <div class="mc-time">${t}</div>
+      ${m.isLive && m.hs !== undefined ? `
+        <div class="mc-score" style="color:var(--red); font-size:28px; line-height: 1.1; margin-bottom: 2px;">${m.hs} – ${m.as}</div>
+        <div style="font-size:11px; font-weight:800; color:var(--red); letter-spacing:1px; margin-bottom:4px;">LIVE ${m.liveDetail || ''}</div>
+      ` : `
+        <div class="mc-vs">VS</div>
+        <div class="mc-time">${t}</div>
+      `}
       <div class="mc-date">${dt}</div>
       <div class="mc-tz">${getTZLabel()}</div>
     </div>
@@ -1876,7 +1899,7 @@ function makeCard(m){
   </div>
   ${probBar}
   <div class="mc-foot">
-    ${cd?`<span class="mc-cd">⏱ ${cd}</span>`:'<span style="font-size:10px;color:var(--t3)">TBD</span>'}
+    ${m.isLive ? `<span class="mc-cd" style="background:rgba(255,77,109,0.15); color:#ff4d6d; font-weight: 700;">⏱ LIVE NOW</span>` : cd?`<span class="mc-cd">⏱ ${cd}</span>`:'<span style="font-size:10px;color:var(--t3)">TBD</span>'}
     <button class="mc-poll-btn" onclick="event.stopPropagation();openPoll(${m.id})">
       🗳️ ${tv>0?tv+' votes':'Vote'}
     </button>
@@ -2067,18 +2090,32 @@ function renderFixtures(){
 
 // ══════════ LIVE ══════════════════════════════════════════
 function renderLive(){
+  const liveMatches = MATCHES.filter(m => m.isLive);
   const soon=MATCHES.filter(m=>!m.tbd&&new Date(m.utc)-Date.now()<172800000&&new Date(m.utc)>Date.now()).slice(0,5);
+  
+  let liveHtml = '';
+  if (liveMatches.length > 0) {
+    liveHtml = `
+      <div class="stage-divider">🔴 Live Matches Now</div>
+      <div class="matches-list">${liveMatches.map(makeCard).join('')}</div>
+    `;
+  } else {
+    liveHtml = `
+      <div class="live-empty">
+        <div class="le-icon">📡</div>
+        <h3>No Live Matches</h3>
+        <p>FIFA World Cup 2026 kicks off <strong style="color:var(--gold)">June 11, 2026</strong><br>
+        Live scores, goals, cards & penalty shootouts will appear here in real-time</p>
+      </div>
+    `;
+  }
+
   document.getElementById('liveContent').innerHTML=`
   <div class="notify-strip">
     🔔 <strong>Match Alerts</strong> — Enable notifications to get alerts 15 min before kickoff & at each goal
     <button class="notif-btn" onclick="reqNotif()">Enable</button>
   </div>
-  <div class="live-empty">
-    <div class="le-icon">📡</div>
-    <h3>No Live Matches</h3>
-    <p>FIFA World Cup 2026 kicks off <strong style="color:var(--gold)">June 11, 2026</strong><br>
-    Live scores, goals, cards & penalty shootouts will appear here in real-time</p>
-  </div>
+  ${liveHtml}
   ${soon.length?`<div class="stage-divider">⏰ Coming Up Soon</div><div class="matches-list">${soon.map(makeCard).join('')}</div>`:''}`;
 }
 
@@ -2090,7 +2127,8 @@ function _teamKey(n){
   // NFD splits accents into combining marks; the [^a-z0-9] strip then removes them (Türkiye→turkiye, Curaçao→curacao)
   let k=(n||'').toLowerCase().normalize('NFD').replace(/&/g,'and').replace(/[^a-z0-9]/g,'');
   const alias={ unitedstates:'usa', bosniaherzegovina:'bosniaandherz', korearepublic:'southkorea',
-    irian:'iran', iranislamicrepublic:'iran', turkey:'turkiye', cotedivoire:'ivorycoast', czechrepublic:'czechia' };
+    irian:'iran', iranislamicrepublic:'iran', turkey:'turkiye', cotedivoire:'ivorycoast', czechrepublic:'czechia',
+    congodr:'drcongo' };
   return alias[k]||k;
 }
 async function syncLiveScores(){
@@ -2102,20 +2140,29 @@ async function syncLiveScores(){
     (data.events||[]).forEach(ev=>{
       const comp=(ev.competitions||[])[0]; if(!comp) return;
       const state=ev.status&&ev.status.type&&ev.status.type.state;   // 'pre' | 'in' | 'post'
+      const detail=ev.status&&ev.status.type&&(ev.status.type.detail||ev.status.type.shortDetail||'');
       const byKey={};
       (comp.competitors||[]).forEach(c=>{ const s=parseInt(c.score,10); byKey[_teamKey(c.team&&c.team.displayName)]=isNaN(s)?null:s; });
       MATCHES.forEach(m=>{
         const hk=_teamKey(m.home), ak=_teamKey(m.away);
         if(!(hk in byKey) || !(ak in byKey)) return;                 // not this match
         if(m.espnId!==ev.id) m.espnId=ev.id;                         // capture id for match details (any state)
-        if(state==='post' && byKey[hk]!=null && byKey[ak]!=null && (m.hs!==byKey[hk] || m.as!==byKey[ak])){
-          m.hs=byKey[hk]; m.as=byKey[ak]; changed=true;              // only count FINISHED matches in standings
+        
+        if(state==='in' && byKey[hk]!=null && byKey[ak]!=null){
+          if(!m.isLive || m.hs!==byKey[hk] || m.as!==byKey[ak] || m.liveDetail!==detail){
+            m.hs=byKey[hk]; m.as=byKey[ak]; m.isLive=true; m.liveDetail=detail; changed=true;
+          }
+        } else if(state==='post' && byKey[hk]!=null && byKey[ak]!=null){
+          if(m.isLive || m.hs!==byKey[hk] || m.as!==byKey[ak]){
+            m.hs=byKey[hk]; m.as=byKey[ak]; m.isLive=false; delete m.liveDetail; changed=true;
+          }
         }
       });
     });
     if(changed && typeof curTab!=='undefined'){
       if(curTab==='groups') renderGroups();
       else if(curTab==='fixtures') renderFixtures();
+      else if(curTab==='live') renderLive();
     }
   }catch(e){ /* offline / blocked → keep existing scores */ }
 }
@@ -2424,6 +2471,16 @@ function renderMatchDetails(d){
       <div class="md-bar"><div class="md-bar-h" style="width:${hp}%"></div><div class="md-bar-a" style="width:${100-hp}%"></div></div>
     </div>`;
   });
+  const isFinished = st.state === 'post';
+  const hTeamName = home.team.displayName || (_mdMatch && _mdMatch.home) || '';
+  const aTeamName = away.team.displayName || (_mdMatch && _mdMatch.away) || '';
+  const highlightsHtml = isFinished ? `
+    <div style="text-align:center; margin: 16px 0 8px;">
+      <div id="md-hl-container"></div>
+      <button class="md-hl-btn" onclick="loadInlineHighlights('${hTeamName.replace(/'/g,'\\\'')}','${aTeamName.replace(/'/g,'\\\'')}')">🎥 Watch Match Highlights</button>
+    </div>
+  ` : '';
+
   document.getElementById('mdBody').innerHTML=`
     <div class="md-comp">FIFA World Cup 2026 · ${stage}</div>
     <div class="md-score">
@@ -2432,10 +2489,79 @@ function renderMatchDetails(d){
       <div class="md-team"><img class="md-logo" src="${aLogo}" onerror="this.style.display='none'" alt=""><div class="md-tn">${away.team.displayName}</div></div>
     </div>
     ${goals.length?`<div class="md-goals"><div class="md-goals-col">${goalLine(home.team.id)||''}</div><div class="md-goals-ball">⚽</div><div class="md-goals-col right">${goalLine(away.team.id)||''}</div></div>`:''}
+    ${highlightsHtml}
     ${statsRows?`<div class="md-stats-title">Team Stats</div>${statsRows}`:'<div class="md-nostats">Detailed stats not available for this match.</div>'}
   `;
 }
 function closeMatchDetails(){ document.getElementById('matchDetailModal').classList.remove('open'); clearInterval(_mdTimer); _mdEventId=null; _mdMatch=null; }
+
+// ── INLINE HIGHLIGHTS (YouTube embed with fallbacks) ──────────────────────────
+async function loadInlineHighlights(home, away) {
+  const container = document.getElementById('md-hl-container');
+  if (!container) return;
+  const btn = container.parentElement.querySelector('.md-hl-btn');
+  // If already loaded, toggle visibility
+  if (container.querySelector('iframe') || container.querySelector('video')) {
+    container.innerHTML = '';
+    if (btn) { btn.innerHTML = '🎥 Watch Match Highlights'; }
+    return;
+  }
+  const searchQ = `${home} vs ${away} FIFA World Cup 2026 highlights`;
+  const q = encodeURIComponent(searchQ);
+
+  // Show loading state
+  container.innerHTML = '<div class="md-hl-loading"><div class="tv-spinner" style="width:22px;height:22px"></div> Loading highlights…</div>';
+  if (btn) btn.innerHTML = '⏳ Loading…';
+
+  // Strategy 1: Try YouTube Data API (no key — uses the public RSS/Atom search) via piped.video
+  let videoId = null;
+  try {
+    const pipedRes = await fetch('https://pipedapi.kavin.rocks/search?q=' + q + '&filter=videos', { signal: AbortSignal.timeout(6000) });
+    if (pipedRes.ok) {
+      const data = await pipedRes.json();
+      const items = (data.items || data.relatedStreams || []).filter(v => v.url || v.videoId);
+      if (items.length > 0) {
+        videoId = items[0].url ? items[0].url.replace('/watch?v=', '') : items[0].videoId;
+      }
+    }
+  } catch(e) { /* piped down, try fallback */ }
+
+  // Strategy 2: Try Invidious API
+  if (!videoId) {
+    try {
+      const invRes = await fetch('https://vid.puffyan.us/api/v1/search?q=' + q + '&type=video', { signal: AbortSignal.timeout(6000) });
+      if (invRes.ok) {
+        const items = await invRes.json();
+        if (items.length > 0 && items[0].videoId) videoId = items[0].videoId;
+      }
+    } catch(e) { /* invidious down too */ }
+  }
+
+  if (videoId) {
+    container.innerHTML = `
+      <div class="md-hl-wrap">
+        <iframe src="https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1"
+          allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
+      </div>
+    `;
+    if (btn) btn.innerHTML = '✕ Close Highlights';
+  } else {
+    // Fallback: show a styled YouTube search link (opens in-app via iframe)
+    container.innerHTML = `
+      <div class="md-hl-wrap">
+        <iframe src="https://www.youtube.com/embed?listType=search&list=${q}" 
+          allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
+      </div>
+      <div style="text-align:center;margin-top:6px">
+        <a href="https://www.youtube.com/results?search_query=${q}" target="_blank" rel="noopener"
+           style="font-size:11px;color:var(--blue);text-decoration:underline">
+          Open on YouTube ↗
+        </a>
+      </div>
+    `;
+    if (btn) btn.innerHTML = '✕ Close Highlights';
+  }
+}
 
 // ══════════ CALENDAR EXPORT ═══════════════════════════════
 function exportCalendar(){exportTeam(fTeam||'ALL');}
@@ -2556,7 +2682,11 @@ const tvPresetChannels = [
   // — World Cup football channels first —
   { id: 'sp1',  cat: 'sports', title: '✅ beIN XTRA (Live Football)', type: 'hls', url: 'https://bein-xtra-bein.amagi.tv/playlist.m3u8', info: 'VERIFIED — beIN free live football, works everywhere' },
   { id: 'sp2',  cat: 'sports', title: '✅ Arryadia (Morocco — Live)', type: 'hls', url: 'https://stream-lb.livemediama.com/arryadia/hls/master.m3u8', info: 'VERIFIED — Morocco TV, live WC match coverage' },
-  { id: 'sp3',  cat: 'sports', title: '🏆 T Sports (BD — WC Official)', type: 'hls', url: 'https://tvsen7.aynaott.com/tsports-hd/index.m3u8', info: 'All 104 matches — works from a BD connection' },
+  { id: 'sp3',  cat: 'sports', title: '🏆 T Sports HD (Server 1)', type: 'hls', url: 'https://tvsen7.aynaott.com/tsports-hd/index.m3u8', info: 'All 104 matches — works from a BD connection' },
+  { id: 'sp3_alt1', cat: 'sports', title: '🏆 T Sports HD (Server 2)', type: 'hls', url: 'https://tvsen5.aynaott.com/tsports/index.m3u8', info: 'Alternate server for T Sports HD' },
+  { id: 'sp3_alt2', cat: 'sports', title: '🏆 T Sports HD (Server 3)', type: 'hls', url: 'https://tvsen6.aynaott.com/tsports-hd/index.m3u8', info: 'Alternate server for T Sports HD' },
+  { id: 'gtv_gp', cat: 'sports', title: '🏆 Gazi TV / GTV (BD CDN)', type: 'hls', url: 'https://owrcovcrpy.gpcdn.net/bpk-tv/1712/output/index.m3u8', info: 'VERIFIED — Gazi TV (GTV) live sports' },
+  { id: 'gtv_alt1', cat: 'sports', title: '🏆 Gazi TV / GTV (Server 2)', type: 'hls', url: 'https://tvsen6.aynaott.com/gtv/index.m3u8', info: 'Alternate server for GTV' },
   { id: 'sp7',  cat: 'sports', title: '⚽ CazeTV (Brazil) 1080p', type: 'hls', url: 'https://dfr80qz435crc.cloudfront.net/MNOP/Amagi/Caze/Caze_TV_BR/1080p-vtt/index.m3u8', info: 'Brazil football channel — 1080p HD' },
   { id: 'sp8',  cat: 'sports', title: '⚽ TYC Sports (Argentina)', type: 'hls', url: 'https://amg26268-amg26268c14-freelivesports-emea-10267.playouts.now.amagi.tv/ts-us-e2-n2/playlist/amg26268-sportsstudio-tycsports-freelivesportsemea/playlist.m3u8', info: 'VERIFIED — Argentina sports, Spanish WC coverage' },
   // — general sports —
@@ -2602,6 +2732,12 @@ const tvPresetChannels = [
   // India Entertainment (verified playing)
   { id: 'en14', cat: 'ent', title: '🇮🇳 DD National HD', type: 'hls', url: 'https://d3qs3d2rkhfqrt.cloudfront.net/out/v1/40492a64c1db4a1385ba1a397d357d3a/index.m3u8', info: 'India national entertainment' },
   { id: 'en15', cat: 'ent', title: '🇮🇳 Mazhavil Manorama', type: 'hls', url: 'https://cdn-7.pishow.tv/live/1129/master.m3u8', info: 'Malayalam entertainment HD' },
+  // BD Channels (from iptv-org playlist)
+  { id: 'en16', cat: 'ent', title: '🔊 Ananda TV (BD)', type: 'hls', url: 'https://bozztv.com/rongo/rongo-AnandaTV/index.m3u8', info: 'Ananda TV Bangladesh 1080p' },
+  { id: 'en17', cat: 'ent', title: '🎵 ATN Music (BD)', type: 'hls', url: 'https://app.ncare.live/c3VydmVyX8RpbEU9Mi8xNy8yMDE0GIDU6RgzQ6NTAgdEoaeFzbF92YWxIZTO0U0ezN1IzMyfvcGVMZEJCTEFWeVN3PTOmdFsaWRtaW51aiPhnPTI/atnmusic.stream/playlist.m3u8', info: 'ATN Music Bangladesh' },
+  { id: 'en18', cat: 'ent', title: '🎬 Bangla TV (BD)', type: 'hls', url: 'https://tvsen6.aynaott.com/banglatv/index.m3u8', info: 'Bangla TV — works from BD connection' },
+  { id: 'en19', cat: 'ent', title: '🎬 Bijoy TV (BD)', type: 'hls', url: 'https://tvsen6.aynaott.com/bijoytv/index.m3u8', info: 'Bijoy TV — works from BD connection' },
+  { id: 'nw17', cat: 'news', title: '📰 ATN News HD (BD)', type: 'hls', url: 'https://bozztv.com/rongo/rongo-ATNNews/index.m3u8', info: 'ATN News 1080p alternate' },
 
   // ═══════════ 🔧 UTILITY ═══════════
   { id: 'ut1',  cat: 'ent', title: '🔧 HLS Test Stream', type: 'hls', url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8', info: 'Mux adaptive bitrate tester' }
@@ -2625,6 +2761,10 @@ const TV_LOGO_BY_ID = {
   sp1:'https://i.imgur.com/uJosqHh.png',
   sp2:'https://i.imgur.com/XjzK3gZ.png',
   sp3:'https://i.imgur.com/2JzlorD.png',
+  sp3_alt1:'https://i.imgur.com/2JzlorD.png',
+  sp3_alt2:'https://i.imgur.com/2JzlorD.png',
+  gtv_gp:'https://upload.wikimedia.org/wikipedia/commons/e/e5/Gazi_TV_logo.png',
+  gtv_alt1:'https://upload.wikimedia.org/wikipedia/commons/e/e5/Gazi_TV_logo.png',
   sp4:'https://i.imgur.com/J2Ky5OO.png',
   sp5:'https://upload.wikimedia.org/wikipedia/commons/thumb/2/2f/ESPN_wordmark.svg/960px-ESPN_wordmark.svg.png',
   sp7:'https://upload.wikimedia.org/wikipedia/en/thumb/6/64/Caz%C3%A9TV_logo.svg/1280px-Caz%C3%A9TV_logo.svg.png',
@@ -2939,7 +3079,7 @@ function playLiveTVStream(type, url, title, key) {
     if (Hls.isSupported()) {
       tvHls = new Hls({
         enableWorker: true,
-        lowLatencyMode: false,
+        lowLatencyMode: true,
         // ── (1) FAST START: begin at the lowest rendition → first frame almost instantly ──
         startLevel: 0,
         autoStartLoad: true,
@@ -2955,18 +3095,18 @@ function playLiveTVStream(type, url, title, key) {
         autoLevelCapping: -1,
         maxStarvationDelay: 6,
         maxLoadingDelay: 6,
-        // ── deep buffer for smoothness ──
-        maxBufferLength: 30,
-        maxMaxBufferLength: 900,
-        maxBufferSize: 400 * 1000 * 1000,
+        // ── optimized buffer for smoothness & fast startup ──
+        maxBufferLength: 10,
+        maxMaxBufferLength: 15,
+        maxBufferSize: 30 * 1024 * 1024,
         maxBufferHole: 0.5,
-        backBufferLength: 60,
+        backBufferLength: 30,
         highBufferWatchdogPeriod: 1,
-        nudgeMaxRetry: 10,
-        appendErrorMaxRetry: 6,
+        nudgeMaxRetry: 5,
+        appendErrorMaxRetry: 3,
         // ── live ──
         liveSyncDurationCount: 3,
-        liveMaxLatencyDurationCount: Infinity,
+        liveMaxLatencyDurationCount: 6,
         liveDurationInfinity: true,
         // ── retries ──
         fragLoadingMaxRetry: 8,
@@ -3011,7 +3151,7 @@ function playLiveTVStream(type, url, title, key) {
         const cfg = {
           manifest: { dash: { ignoreMinBufferTime: true } },
           streaming: {
-            bufferingGoal: 40, rebufferingGoal: 1.5, bufferBehind: 40, segmentPrefetchLimit: 8,
+            bufferingGoal: 8, rebufferingGoal: 2, bufferBehind: 10, segmentPrefetchLimit: 3,
             stallEnabled: true, stallThreshold: 1, stallSkip: 0.2, gapDetectionThreshold: 0.1,
             retryParameters: {
               maxAttempts: 8, baseDelay: 300, backoffFactor: 1.5, fuzzFactor: 0.5,
