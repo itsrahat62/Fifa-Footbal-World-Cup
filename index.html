@@ -530,7 +530,7 @@ select option{background:#0d1a2e;color:#fff}
 .md-nostats{font-size:12px;color:rgba(255,255,255,0.4);text-align:center;padding:14px 0}
 /* ── INLINE HIGHLIGHTS VIDEO ── */
 .md-hl-wrap{margin:14px 0 10px;border-radius:12px;overflow:hidden;background:#000;position:relative}
-.md-hl-wrap iframe{width:100%;aspect-ratio:16/9;border:none;border-radius:12px;display:block}
+.md-hl-wrap iframe,.md-hl-wrap #md-yt-player{width:100%;aspect-ratio:16/9;border:none;border-radius:12px;display:block}
 .md-hl-btn{
   display:inline-flex;align-items:center;gap:8px;cursor:pointer;
   background:var(--gold3);border:1px solid rgba(245,197,24,0.35);
@@ -2544,68 +2544,81 @@ function renderMatchDetails(d){
 }
 function closeMatchDetails(){ document.getElementById('matchDetailModal').classList.remove('open'); clearInterval(_mdTimer); _mdEventId=null; _mdMatch=null; }
 
-// ── INLINE HIGHLIGHTS (YouTube embed with fallbacks) ──────────────────────────
-async function loadInlineHighlights(home, away) {
-  const container = document.getElementById('md-hl-container');
-  if (!container) return;
-  const btn = container.parentElement.querySelector('.md-hl-btn');
-  // If already loaded, toggle visibility
-  if (container.querySelector('iframe') || container.querySelector('video')) {
-    container.innerHTML = '';
-    if (btn) { btn.innerHTML = '🎥 Watch Match Highlights'; }
-    return;
+// ── INLINE HIGHLIGHTS (auto-skips embed-blocked videos via the YouTube IFrame API) ──
+let _ytApiReady=null,_hlPlayer=null;
+function _loadYTApi(){
+  if(window.YT&&window.YT.Player) return Promise.resolve();
+  if(_ytApiReady) return _ytApiReady;
+  _ytApiReady=new Promise(res=>{
+    const prev=window.onYouTubeIframeAPIReady;
+    window.onYouTubeIframeAPIReady=()=>{ if(prev){try{prev()}catch(e){}} res(); };
+    const s=document.createElement('script'); s.src='https://www.youtube.com/iframe_api'; document.head.appendChild(s);
+    setTimeout(res,5000);   // don't hang forever if the API script is blocked
+  });
+  return _ytApiReady;
+}
+async function loadInlineHighlights(home, away){
+  const container=document.getElementById('md-hl-container');
+  if(!container) return;
+  const btn=container.parentElement.querySelector('.md-hl-btn');
+  if(container.children.length){                              // toggle closed
+    container.innerHTML=''; if(_hlPlayer){try{_hlPlayer.destroy()}catch(e){} _hlPlayer=null;}
+    if(btn) btn.innerHTML='🎥 Watch Match Highlights'; return;
   }
-  const searchQ = `${home} vs ${away} World Cup 2026 highlights`;
-  const q = encodeURIComponent(searchQ);
+  const q=encodeURIComponent(`${home} vs ${away} World Cup 2026 highlights`);
+  container.innerHTML='<div class="md-hl-loading"><div class="tv-spinner" style="width:22px;height:22px"></div> Loading highlights…</div>';
+  if(btn) btn.innerHTML='⏳ Loading…';
 
-  // Show loading state
-  container.innerHTML = '<div class="md-hl-loading"><div class="tv-spinner" style="width:22px;height:22px"></div> Loading highlights…</div>';
-  if (btn) btn.innerHTML = '⏳ Loading…';
-
-  // Search YouTube via public, CORS-enabled Piped / Invidious instances (rotate until one answers)
-  const PIPED = ['https://api.piped.private.coffee','https://pipedapi.adminforge.de','https://pipedapi.reallyaweso.me','https://pipedapi.leptons.xyz','https://pipedapi.kavin.rocks'];
-  const INV   = ['https://inv.nadeko.net','https://invidious.nerdvpn.de','https://yewtu.be','https://invidious.f5.si'];
-  let videoId = null;
-  for (const base of PIPED) {
-    try {
-      const r = await fetch(base + '/search?q=' + q + '&filter=videos', { signal: AbortSignal.timeout(6000) });
-      if (!r.ok) continue;
-      const j = await r.json();
-      const items = (j.items || j.relatedStreams || []).filter(v => v.url || v.videoId);
-      if (items.length) { videoId = items[0].url ? items[0].url.replace('/watch?v=','') : items[0].videoId; break; }
-    } catch(e) {}
+  // search YouTube via public, CORS-enabled Piped / Invidious instances
+  const PIPED=['https://api.piped.private.coffee','https://pipedapi.adminforge.de','https://pipedapi.reallyaweso.me','https://pipedapi.leptons.xyz'];
+  const INV=['https://inv.nadeko.net','https://invidious.nerdvpn.de','https://yewtu.be'];
+  let cands=[];
+  for(const base of PIPED){
+    try{
+      const r=await fetch(base+'/search?q='+q+'&filter=videos',{signal:AbortSignal.timeout(6000)});
+      if(!r.ok) continue;
+      const j=await r.json();
+      cands=(j.items||j.relatedStreams||[]).map(v=>({id:v.url?v.url.replace('/watch?v=',''):v.videoId,up:v.uploaderName||'',title:v.title||''})).filter(v=>v.id);
+      if(cands.length) break;
+    }catch(e){}
   }
-  if (!videoId) {
-    for (const base of INV) {
-      try {
-        const r = await fetch(base + '/api/v1/search?q=' + q + '&type=video', { signal: AbortSignal.timeout(6000) });
-        if (!r.ok) continue;
-        const items = await r.json();
-        if (Array.isArray(items) && items.length && items[0].videoId) { videoId = items[0].videoId; break; }
-      } catch(e) {}
+  if(!cands.length){
+    for(const base of INV){
+      try{
+        const r=await fetch(base+'/api/v1/search?q='+q+'&type=video',{signal:AbortSignal.timeout(6000)});
+        if(!r.ok) continue;
+        const items=await r.json();
+        if(Array.isArray(items)) cands=items.map(v=>({id:v.videoId,up:v.author||'',title:v.title||''})).filter(v=>v.id);
+        if(cands.length) break;
+      }catch(e){}
     }
   }
+  if(btn) btn.innerHTML='✕ Close Highlights';
+  // prefer non-FIFA-official uploads with "highlight" in the title (these usually allow embedding)
+  const ids=cands.slice().sort((a,b)=>{
+    const sc=v=>(/highlight/i.test(v.title)?2:0)+(/fifa/i.test(v.up)?-3:0);
+    return sc(b)-sc(a);
+  }).map(v=>v.id).slice(0,10);
+  const fallback=()=>{ container.innerHTML=`<div class="md-hl-fallback"><div style="font-size:32px;margin-bottom:8px">🎬</div><p style="font-size:12px;color:var(--t2);margin-bottom:12px">These highlights block embedding. Watch them on YouTube:</p><a href="https://www.youtube.com/results?search_query=${q}" target="_blank" rel="noopener" class="md-hl-yt">▶ ${home} vs ${away} — Highlights</a></div>`; };
+  if(!ids.length){ fallback(); return; }
 
-  if (videoId) {
-    container.innerHTML = `
-      <div class="md-hl-wrap">
-        <iframe src="https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1"
-          allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
-      </div>
-      <div style="text-align:center;margin-top:6px">
-        <a href="https://www.youtube.com/watch?v=${videoId}" target="_blank" rel="noopener"
-           style="font-size:11px;color:var(--blue)">Open on YouTube ↗</a>
-      </div>`;
-  } else {
-    // No instance reachable → clean link-out card (never a broken "video unavailable" embed)
-    container.innerHTML = `
-      <div class="md-hl-fallback">
-        <div style="font-size:32px;margin-bottom:8px">🎬</div>
-        <p style="font-size:12px;color:var(--t2);margin-bottom:12px">Highlights couldn't load inline right now. Watch them on YouTube:</p>
-        <a href="https://www.youtube.com/results?search_query=${q}" target="_blank" rel="noopener" class="md-hl-yt">▶ ${home} vs ${away} — Highlights</a>
-      </div>`;
+  await _loadYTApi();
+  container.innerHTML='<div class="md-hl-wrap"><div id="md-yt-player"></div></div>';
+  let i=0;
+  function tryNext(){
+    if(i>=ids.length){ fallback(); return; }
+    const vid=ids[i++];
+    if(_hlPlayer&&_hlPlayer.loadVideoById){ _hlPlayer.loadVideoById(vid); return; }
+    if(!window.YT||!window.YT.Player){    // API blocked → plain embed (best effort)
+      container.innerHTML=`<div class="md-hl-wrap"><iframe src="https://www.youtube-nocookie.com/embed/${vid}?autoplay=1&rel=0" allow="autoplay;encrypted-media;picture-in-picture" allowfullscreen></iframe></div>`; return;
+    }
+    _hlPlayer=new YT.Player('md-yt-player',{
+      width:'100%',height:'100%',videoId:vid,
+      playerVars:{autoplay:1,rel:0,modestbranding:1,playsinline:1},
+      events:{ onError:()=>setTimeout(tryNext,200) }   // 101/150 = embedding disabled → next candidate
+    });
   }
-  if (btn) btn.innerHTML = '✕ Close Highlights';
+  tryNext();
 }
 
 // ══════════ CALENDAR EXPORT ═══════════════════════════════
