@@ -2871,13 +2871,23 @@ const tvPresetChannels = [
   // ═══════════ 🔧 UTILITY ═══════════
   { id: 'ut1',  cat: 'ent', title: '🔧 HLS Test Stream', type: 'hls', url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8', info: 'Mux adaptive bitrate tester' }
 ];
+// Tabs: World Cup (curated) + every repo category, so ALL 9000+ channels are browsable
 const tvCategories = [
-  { key: 'all',    label: 'All' },
-  { key: 'wc',     label: '⚽ World Cup' },
-  { key: 'sports', label: '🏆 Sports' },
-  { key: 'news',   label: '📰 News' },
-  { key: 'ent',    label: '🎬 Entertainment' }
+  { key: 'wc',            label: '⚽ World Cup' },
+  { key: 'all',           label: '📺 All' },
+  { key: 'Sports',        label: '🏆 Sports' },
+  { key: 'News',          label: '📰 News' },
+  { key: 'Entertainment', label: '🎬 Entertainment' },
+  { key: 'Movies',        label: '🎬 Movies' },
+  { key: 'Music',         label: '🎵 Music' },
+  { key: 'Kids',          label: '🧒 Kids' },
+  { key: 'Documentary',   label: '📚 Docs' },
+  { key: 'Bangla',        label: '🇧🇩 Bangla' },
+  { key: 'Religious',     label: '🕌 Religious' },
+  { key: 'General',       label: '🌐 General' }
 ];
+// repo category key -> matching curated channel cat
+const CURATED_CAT = { Sports:'sports', News:'news', Entertainment:'ent' };
 // World Cup football channels = the verified live feeds, DRM match channels, and football sports feeds
 const isWCChannel = (ch) => /^wcl?\d/.test(ch.id) || ['sp1','sp2','sp3','sp7','sp8','sp9'].includes(ch.id);
 let tvActiveCat = 'wc';
@@ -2901,6 +2911,7 @@ async function loadAllChannels(){
     if(sub) sub.textContent = `World Cup + ${tvAllChannels.length.toLocaleString()} live channels`;
   }catch(e){ console.warn('channels.json load failed', e); }
   _tvChannelsLoading = false;
+  if(document.getElementById('tv-cat-tabs') && typeof renderTVPresets==='function') renderTVPresets();  // refresh tab counts
 }
 // pick a playable server + route through the proxy when the browser can't reach it directly.
 // Auto-tries the channel's next server if one doesn't start (some upstreams block Cloudflare IPs).
@@ -3200,7 +3211,7 @@ function tvShowSpinner(show) {
   if (sp) sp.classList.toggle('active', !!show);
   if (show) {
     clearTimeout(_spinnerSafety);
-    _spinnerSafety = setTimeout(() => { const s = document.getElementById('tv-spinner'); if (s) s.classList.remove('active'); }, 25000);
+    _spinnerSafety = setTimeout(() => { const s = document.getElementById('tv-spinner'); if (s) s.classList.remove('active'); }, 14000);
   }
 }
 
@@ -3411,9 +3422,10 @@ function renderTVPresets() {
   }
   tabsEl.innerHTML = '';
   tvCategories.forEach(c => {
-    const count = c.key === 'all' ? tvPresetChannels.length
-                : c.key === 'wc' ? tvPresetChannels.filter(isWCChannel).length
-                : tvPresetChannels.filter(ch => ch.cat === c.key).length;
+    const count = c.key === 'wc' ? tvPresetChannels.filter(isWCChannel).length
+      : c.key === 'all' ? (tvPresetChannels.length + (tvAllChannels ? tvAllChannels.length : 0))
+      : ((tvAllChannels ? tvAllChannels.filter(ch => ch.cat === c.key).length : 0)
+         + (CURATED_CAT[c.key] ? tvPresetChannels.filter(ch => ch.cat === CURATED_CAT[c.key]).length : 0));
     const btn = document.createElement('button');
     btn.className = 'tv-cat-tab' + (tvActiveCat === c.key ? ' active' : '');
     btn.innerHTML = `${c.label} <span class="tv-cat-count">${count}</span>`;
@@ -3456,45 +3468,53 @@ function renderTVPresets() {
     return;
   }
 
-  const sections = tvActiveCat === 'all'
-    ? [['sports','🏆 World Cup & Sports'],['news','📰 News'],['ent','🎬 Entertainment']]
-    : [[tvActiveCat, tvCategories.find(c=>c.key===tvActiveCat).label]];
-
   let firstItem = null;
-  sections.forEach(([catKey, catLabel]) => {
-    const chans = catKey === 'wc'
-      ? tvPresetChannels.filter(isWCChannel)
-      : tvPresetChannels.filter(ch => ch.cat === catKey);
-    if (!chans.length) return;
-    if (tvActiveCat === 'all') {
-      const hdr = document.createElement('div');
-      hdr.className = 'tv-section-header';
-      hdr.textContent = catLabel;
-      list.appendChild(hdr);
-    }
-    chans.forEach(ch => {
-      const item = document.createElement('div');
-      item.className = 'tv-channel-item';
-      item.setAttribute('data-url', ch.url);
-      const tag = (ch.type === 'hls' || ch.type === 'dash')
-        ? '<span class="tv-ch-tag live">live</span>'
-        : '<span class="tv-ch-tag portal">portal</span>';
-      item.innerHTML = `
-        <div class="tv-channel-icon">${tvIconHTML(ch)}</div>
-        <div class="tv-channel-info">
-          <span class="tv-ch-name">${ch.title}</span>
-          <span class="tv-ch-desc">${ch.info}</span>
-        </div>
-        ${tag}
-      `;
-      item.addEventListener('click', () => {
-        tvHighlightActive(ch.url);
-        playLiveTVStream(ch.type, ch.url, ch.title, ch.key);
-      });
-      list.appendChild(item);
-      if (!firstItem) firstItem = item;
+  const MAX = 800;   // cap per view to keep the channel list snappy
+  const sectionHeader = (txt) => { const h=document.createElement('div'); h.className='tv-section-header'; h.textContent=txt; list.appendChild(h); };
+  const curatedItem = (ch) => {
+    const item = document.createElement('div');
+    item.className = 'tv-channel-item';
+    item.setAttribute('data-url', ch.url);
+    const tag = (ch.type==='hls'||ch.type==='dash') ? '<span class="tv-ch-tag live">live</span>' : '<span class="tv-ch-tag portal">portal</span>';
+    item.innerHTML = `<div class="tv-channel-icon">${tvIconHTML(ch)}</div><div class="tv-channel-info"><span class="tv-ch-name">${ch.title}</span><span class="tv-ch-desc">${ch.info}</span></div>${tag}`;
+    item.addEventListener('click', () => { tvHighlightActive(ch.url); playLiveTVStream(ch.type, ch.url, ch.title, ch.key); });
+    list.appendChild(item); if(!firstItem) firstItem=item;
+  };
+  const repoItem = (c) => {
+    const s=(c.servers||[])[0]||{}; const needsProxy=(s.url||'').startsWith('http://')||s.referer||s.ua;
+    const item=document.createElement('div'); item.className='tv-channel-item';
+    item.innerHTML=`<div class="tv-channel-icon">${c.logo?`<img src="${c.logo}" alt="" loading="lazy" onerror="this.style.display='none';this.parentElement.textContent='📺'">`:'📺'}</div><div class="tv-channel-info"><span class="tv-ch-name">${c.name}</span><span class="tv-ch-desc">${c.cat||''}${c.servers.length>1?' · '+c.servers.length+' servers':''}</span></div><span class="tv-ch-tag ${needsProxy?'portal':'live'}">${needsProxy?'proxy':'live'}</span>`;
+    item.addEventListener('click', () => playRepoChannel(c));
+    list.appendChild(item); if(!firstItem) firstItem=item;
+  };
+  const moreNote = (n) => { const m=document.createElement('div'); m.className='tv-empty-state'; m.style.fontSize='11px'; m.textContent=`+${n.toLocaleString()} more — type in search to find them`; list.appendChild(m); };
+
+  if (tvActiveCat === 'wc') {
+    tvPresetChannels.filter(isWCChannel).forEach(curatedItem);
+  } else if (tvActiveCat === 'all') {
+    [['sports','🏆 World Cup & Sports'],['news','📰 News'],['ent','🎬 Entertainment']].forEach(([ck,lbl])=>{
+      const ch=tvPresetChannels.filter(x=>x.cat===ck); if(!ch.length) return;
+      sectionHeader(lbl); ch.forEach(curatedItem);
     });
-  });
+    if (tvAllChannels) {
+      sectionHeader('🌐 All Live Channels');
+      tvAllChannels.slice(0, MAX).forEach(repoItem);
+      if (tvAllChannels.length > MAX) moreNote(tvAllChannels.length - MAX);
+    } else { loadAllChannels().then(()=>{ if(tvActiveCat==='all' && tvSearchQ.length<2) renderTVPresets(); }); }
+  } else {
+    // a repo category → curated matching + every repo channel of that category
+    const curated = CURATED_CAT[tvActiveCat] ? tvPresetChannels.filter(ch=>ch.cat===CURATED_CAT[tvActiveCat]) : [];
+    curated.forEach(curatedItem);
+    if (!tvAllChannels) {
+      if (!curated.length) list.innerHTML='<div class="tv-empty-state"><div class="tv-spinner" style="width:22px;height:22px;margin:0 auto 8px"></div> Loading channels…</div>';
+      loadAllChannels().then(()=>{ if(tvSearchQ.length<2) renderTVPresets(); });
+    } else {
+      const repo = tvAllChannels.filter(c=>c.cat===tvActiveCat);
+      repo.slice(0, MAX).forEach(repoItem);
+      if (repo.length > MAX) moreNote(repo.length - MAX);
+      if (!curated.length && !repo.length) list.innerHTML='<div class="tv-empty-state">No channels in this category.</div>';
+    }
+  }
   // keep the currently-playing channel highlighted across re-renders
   let cur = null; try { cur = JSON.parse(localStorage.getItem('wc2026_last_tv')||'null'); } catch(e){}
   if (cur && cur.url && list.querySelector(`[data-url="${CSS.escape(cur.url)}"]`)) tvHighlightActive(cur.url);
