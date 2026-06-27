@@ -1056,6 +1056,21 @@ select option{background:#0d1a2e;color:#fff}
   color: var(--t3);
   margin-top: 3px;
 }
+.tv-search {
+  width: 100%;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 10px 16px;
+  color: var(--t1);
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  margin-bottom: 12px;
+  transition: border-color .2s, background .2s;
+}
+.tv-search::placeholder { color: var(--t3); }
+.tv-search:focus { border-color: rgba(245,197,24,0.5); background: rgba(245,197,24,0.05); }
 .tv-channel-list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(265px, 1fr));
@@ -1478,7 +1493,9 @@ select option{background:#0d1a2e;color:#fff}
         <div class="tv-card">
           <div class="tv-card-header">
             <h3>📡 Free Live Channels</h3>
+            <p id="tv-channel-sub">World Cup + 9000+ live channels</p>
           </div>
+          <input type="text" id="tv-search" class="tv-search" placeholder="🔍 Search 9000+ channels (e.g. Star Sports, BBC)…" autocomplete="off">
           <div class="tv-channel-list" id="tv-preset-list"></div>
         </div>
 
@@ -2809,6 +2826,42 @@ const tvCategories = [
   { key: 'ent',    label: '🎬 Entertainment' }
 ];
 let tvActiveCat = 'all';
+
+// ════════ DYNAMIC CHANNELS (itsrahat62/livetv-channels — same source as the app) ════════
+// Set TV_PROXY to your Cloudflare Worker URL (see cloudflare-worker.js) to unlock the
+// http / referer-locked channels too. Clean HTTPS channels work without it.
+const TV_PROXY = "";
+const TV_CHANNELS_URL = "https://cdn.jsdelivr.net/gh/itsrahat62/livetv-channels@main/channels.json";
+let tvAllChannels = null;          // loaded array of {id,name,cat,logo,servers[]}
+let tvSearchQ = '';
+let _tvChannelsLoading = false;
+async function loadAllChannels(){
+  if(tvAllChannels || _tvChannelsLoading) return;
+  _tvChannelsLoading = true;
+  try{
+    const r = await fetch(TV_CHANNELS_URL, { cache: 'force-cache' });
+    const d = await r.json();
+    tvAllChannels = (d.channels || d || []).filter(c => c && c.name && (c.servers||[]).length);
+    const sub = document.getElementById('tv-channel-sub');
+    if(sub) sub.textContent = `World Cup + ${tvAllChannels.length.toLocaleString()} live channels`;
+  }catch(e){ console.warn('channels.json load failed', e); }
+  _tvChannelsLoading = false;
+}
+// pick a playable server + route through the proxy when the browser can't reach it directly
+function playRepoChannel(ch){
+  const s = (ch.servers||[])[0]; if(!s||!s.url) return;
+  let url = s.url;
+  const type = (s.type==='dash'||/\.mpd(\?|$)/i.test(url)) ? 'dash' : 'hls';
+  const needsProxy = url.startsWith('http://') || s.referer || s.ua;
+  if(needsProxy){
+    if(!TV_PROXY){ alert('⚠️ This channel needs the proxy. Deploy the Cloudflare Worker (cloudflare-worker.js) and set TV_PROXY to enable http / header-locked channels.'); return; }
+    url = TV_PROXY.replace(/\/+$/,'') + '/?url=' + encodeURIComponent(url)
+        + (s.referer ? '&ref=' + encodeURIComponent(s.referer) : '')
+        + (s.ua ? '&ua=' + encodeURIComponent(s.ua) : '');
+  }
+  tvHighlightActive(url);
+  playLiveTVStream(type, url, ch.name, s.key||'');
+}
 let tvSavedStreams = [];
 let tvLoadedPlaylist = [];
 
@@ -3016,6 +3069,19 @@ function initLiveTV() {
   // Render lists
   renderTVPresets();
   renderTVSavedChannels();
+
+  // ── Search box for the 9000+ dynamic channels (debounced) ──
+  const searchEl = document.getElementById('tv-search');
+  if (searchEl) {
+    let _t;
+    searchEl.addEventListener('focus', loadAllChannels);   // prefetch on first focus
+    searchEl.addEventListener('input', () => {
+      tvSearchQ = searchEl.value.trim();
+      clearTimeout(_t);
+      _t = setTimeout(renderTVPresets, 220);
+    });
+  }
+  loadAllChannels();   // background prefetch so search is instant
 
   // ── (6) Resume last-watched channel; else default to first HLS channel (fast start) ──
   let resume = null;
@@ -3284,6 +3350,40 @@ function renderTVPresets() {
   });
 
   list.innerHTML = '';
+
+  // ── Search mode: query the 9000+ dynamic channel list ──
+  if (tvSearchQ.length >= 2) {
+    if (!tvAllChannels) {
+      list.innerHTML = '<div class="tv-empty-state"><div class="tv-spinner" style="width:22px;height:22px;margin:0 auto 8px"></div> Loading channels…</div>';
+      loadAllChannels().then(() => { if (tvSearchQ.length >= 2) renderTVPresets(); });
+      return;
+    }
+    const ql = tvSearchQ.toLowerCase();
+    const matches = tvAllChannels.filter(c => c.name.toLowerCase().includes(ql)).slice(0, 250);
+    if (!matches.length) { list.innerHTML = '<div class="tv-empty-state">No channels match “' + tvSearchQ + '”.</div>'; return; }
+    const hdr = document.createElement('div');
+    hdr.className = 'tv-section-header';
+    hdr.textContent = `🔍 ${matches.length}${matches.length===250?'+':''} result${matches.length!==1?'s':''}`;
+    list.appendChild(hdr);
+    matches.forEach(c => {
+      const s = (c.servers||[])[0] || {};
+      const needsProxy = (s.url||'').startsWith('http://') || s.referer || s.ua;
+      const item = document.createElement('div');
+      item.className = 'tv-channel-item';
+      item.innerHTML = `
+        <div class="tv-channel-icon">${c.logo ? `<img src="${c.logo}" alt="" loading="lazy" onerror="this.style.display='none';this.parentElement.textContent='📺'">` : '📺'}</div>
+        <div class="tv-channel-info">
+          <span class="tv-ch-name">${c.name}</span>
+          <span class="tv-ch-desc">${c.cat||''}${c.servers.length>1?' · '+c.servers.length+' servers':''}</span>
+        </div>
+        <span class="tv-ch-tag ${needsProxy?'portal':'live'}">${needsProxy?'proxy':'live'}</span>
+      `;
+      item.addEventListener('click', () => playRepoChannel(c));
+      list.appendChild(item);
+    });
+    return;
+  }
+
   const sections = tvActiveCat === 'all'
     ? [['sports','🏆 World Cup & Sports'],['news','📰 News'],['ent','🎬 Entertainment']]
     : [[tvActiveCat, tvCategories.find(c=>c.key===tvActiveCat).label]];
