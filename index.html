@@ -542,6 +542,9 @@ select option{background:#0d1a2e;color:#fff}
 }
 .md-hl-btn:hover{background:rgba(245,197,24,0.18);border-color:rgba(245,197,24,0.5)}
 .md-hl-loading{display:flex;align-items:center;justify-content:center;padding:20px;color:var(--t3);font-size:12px;gap:8px}
+.md-hl-fallback{text-align:center;padding:18px 14px;margin:14px 0 10px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:12px}
+.md-hl-yt{display:inline-block;background:#ff0000;color:#fff;font-size:12px;font-weight:700;padding:9px 18px;border-radius:24px;text-decoration:none;transition:all .2s}
+.md-hl-yt:hover{background:#cc0000;transform:translateY(-1px)}
 .md-hl-error{text-align:center;color:var(--t3);font-size:11px;padding:10px}
 @media(max-width:768px){
   .md-modal{max-width:100%}
@@ -2159,10 +2162,12 @@ async function syncLiveScores(){
         }
       });
     });
+    if(resolveKnockoutTeams()) changed=true;           // auto-fill bracket as groups/rounds finish
     if(changed && typeof curTab!=='undefined'){
       if(curTab==='groups') renderGroups();
       else if(curTab==='fixtures') renderFixtures();
       else if(curTab==='live') renderLive();
+      else if(curTab==='bracket' && typeof bkInit==='function') bkInit();
     }
   }catch(e){ /* offline / blocked → keep existing scores */ }
 }
@@ -2188,6 +2193,43 @@ function calcGroupStandings(g){
   return Object.values(teams).sort((a,b)=>
     b.pts-a.pts||b.gd-a.gd||b.gf-a.gf||a.name.localeCompare(b.name)
   );
+}
+
+// ── Auto-fill the bracket: resolve seed codes (1A / 2B / 3rd-N / W73) to real teams as results land ──
+function _matchWinner(id){
+  const m=MATCHES.find(x=>x.id===id);
+  if(!m||m.hs===undefined||m.as===undefined) return null;
+  if(m.hs>m.as) return m.home; if(m.as>m.hs) return m.away;
+  return null;                                 // draw (would go to penalties) — leave unresolved
+}
+function _isSeedCode(s){ return /^([12][A-L]|3rd-[1-8]|W\d+)$/.test(s); }
+function resolveKnockoutTeams(){
+  const pos={}, thirds=[]; let allGroupsDone=true;
+  'ABCDEFGHIJKL'.split('').forEach(g=>{
+    const gm=MATCHES.filter(m=>m.stage==='Group '+g);
+    const played=gm.filter(m=>m.hs!==undefined).length;
+    if(gm.length && played===gm.length){
+      const st=calcGroupStandings(g);
+      if(st[0]) pos['1'+g]=st[0].name; if(st[1]) pos['2'+g]=st[1].name; if(st[2]) thirds.push(st[2]);
+    } else allGroupsDone=false;
+  });
+  if(allGroupsDone && thirds.length){                         // rank the 8 best third-placed teams
+    thirds.slice().sort((a,b)=>b.pts-a.pts||b.gd-a.gd||b.gf-a.gf).slice(0,8)
+      .forEach((t,i)=>{ pos['3rd-'+(i+1)]=t.name; });
+  }
+  let changed=false;
+  MATCHES.forEach(m=>{
+    if(!m.tbd) return;
+    ['home','away'].forEach(side=>{
+      const code=m['_seed_'+side]||m[side];
+      let real=null;
+      if(/^[12][A-L]$/.test(code)||/^3rd-[1-8]$/.test(code)) real=pos[code];
+      else { const wm=/^W(\d+)$/.exec(code); if(wm) real=_matchWinner(+wm[1]); }
+      if(real){ if(!m['_seed_'+side]) m['_seed_'+side]=code; if(m[side]!==real){ m[side]=real; changed=true; } }
+    });
+    if(!_isSeedCode(m.home)&&!_isSeedCode(m.away)){ if(m.tbd){ m.tbd=0; changed=true; } }  // both real → playable
+  });
+  return changed;
 }
 
 function renderGroups(){
@@ -2327,10 +2369,17 @@ function renderStats(){
     </div>`).join('')}
   </div>
   <div class="sc">
-    <h3>📊 Tournament at a Glance</h3>
+    <h3>📊 Tournament — Live Numbers</h3>
     <div class="stats-tiles">
-      ${[['🌍','Teams','48'],['⚽','Matches','104'],['🏟️','Venues','16'],['📅','Days','39'],
-         ['🌎','Host Nations','3'],['📋','Groups','12'],['🔵','R of 32','32'],['🏆','Champion','TBD']]
+      ${(()=>{
+        const fin=MATCHES.filter(m=>m.hs!==undefined&&m.as!==undefined);
+        const goals=fin.reduce((s,m)=>s+m.hs+m.as,0);
+        const avg=fin.length?(goals/fin.length).toFixed(2):'0';
+        const finalM=MATCHES.find(m=>m.stage==='Final');
+        const champ=(finalM&&finalM.hs!==undefined&&finalM.hs!==finalM.as)?(finalM.hs>finalM.as?finalM.home:finalM.away):'TBD';
+        return [['⚽','Matches Played',`${fin.length} / 104`],['🥅','Goals Scored',`${goals}`],['📊','Avg Goals/Match',`${avg}`],
+                ['🌍','Teams','48'],['🏟️','Venues','16'],['📋','Groups','12'],['🔵','R of 32','32'],['🏆','Champion',champ]];
+      })()
         .map(([ic,lb,vl])=>`<div class="stat-tile">
           <div class="stat-tile-icon">${ic}</div>
           <div class="stat-tile-val">${vl}</div>
@@ -2506,35 +2555,35 @@ async function loadInlineHighlights(home, away) {
     if (btn) { btn.innerHTML = '🎥 Watch Match Highlights'; }
     return;
   }
-  const searchQ = `${home} vs ${away} FIFA World Cup 2026 highlights`;
+  const searchQ = `${home} vs ${away} World Cup 2026 highlights`;
   const q = encodeURIComponent(searchQ);
 
   // Show loading state
   container.innerHTML = '<div class="md-hl-loading"><div class="tv-spinner" style="width:22px;height:22px"></div> Loading highlights…</div>';
   if (btn) btn.innerHTML = '⏳ Loading…';
 
-  // Strategy 1: Try YouTube Data API (no key — uses the public RSS/Atom search) via piped.video
+  // Search YouTube via public, CORS-enabled Piped / Invidious instances (rotate until one answers)
+  const PIPED = ['https://api.piped.private.coffee','https://pipedapi.adminforge.de','https://pipedapi.reallyaweso.me','https://pipedapi.leptons.xyz','https://pipedapi.kavin.rocks'];
+  const INV   = ['https://inv.nadeko.net','https://invidious.nerdvpn.de','https://yewtu.be','https://invidious.f5.si'];
   let videoId = null;
-  try {
-    const pipedRes = await fetch('https://pipedapi.kavin.rocks/search?q=' + q + '&filter=videos', { signal: AbortSignal.timeout(6000) });
-    if (pipedRes.ok) {
-      const data = await pipedRes.json();
-      const items = (data.items || data.relatedStreams || []).filter(v => v.url || v.videoId);
-      if (items.length > 0) {
-        videoId = items[0].url ? items[0].url.replace('/watch?v=', '') : items[0].videoId;
-      }
-    }
-  } catch(e) { /* piped down, try fallback */ }
-
-  // Strategy 2: Try Invidious API
-  if (!videoId) {
+  for (const base of PIPED) {
     try {
-      const invRes = await fetch('https://vid.puffyan.us/api/v1/search?q=' + q + '&type=video', { signal: AbortSignal.timeout(6000) });
-      if (invRes.ok) {
-        const items = await invRes.json();
-        if (items.length > 0 && items[0].videoId) videoId = items[0].videoId;
-      }
-    } catch(e) { /* invidious down too */ }
+      const r = await fetch(base + '/search?q=' + q + '&filter=videos', { signal: AbortSignal.timeout(6000) });
+      if (!r.ok) continue;
+      const j = await r.json();
+      const items = (j.items || j.relatedStreams || []).filter(v => v.url || v.videoId);
+      if (items.length) { videoId = items[0].url ? items[0].url.replace('/watch?v=','') : items[0].videoId; break; }
+    } catch(e) {}
+  }
+  if (!videoId) {
+    for (const base of INV) {
+      try {
+        const r = await fetch(base + '/api/v1/search?q=' + q + '&type=video', { signal: AbortSignal.timeout(6000) });
+        if (!r.ok) continue;
+        const items = await r.json();
+        if (Array.isArray(items) && items.length && items[0].videoId) { videoId = items[0].videoId; break; }
+      } catch(e) {}
+    }
   }
 
   if (videoId) {
@@ -2543,24 +2592,20 @@ async function loadInlineHighlights(home, away) {
         <iframe src="https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1"
           allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
       </div>
-    `;
-    if (btn) btn.innerHTML = '✕ Close Highlights';
-  } else {
-    // Fallback: show a styled YouTube search link (opens in-app via iframe)
-    container.innerHTML = `
-      <div class="md-hl-wrap">
-        <iframe src="https://www.youtube.com/embed?listType=search&list=${q}" 
-          allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
-      </div>
       <div style="text-align:center;margin-top:6px">
-        <a href="https://www.youtube.com/results?search_query=${q}" target="_blank" rel="noopener"
-           style="font-size:11px;color:var(--blue);text-decoration:underline">
-          Open on YouTube ↗
-        </a>
-      </div>
-    `;
-    if (btn) btn.innerHTML = '✕ Close Highlights';
+        <a href="https://www.youtube.com/watch?v=${videoId}" target="_blank" rel="noopener"
+           style="font-size:11px;color:var(--blue)">Open on YouTube ↗</a>
+      </div>`;
+  } else {
+    // No instance reachable → clean link-out card (never a broken "video unavailable" embed)
+    container.innerHTML = `
+      <div class="md-hl-fallback">
+        <div style="font-size:32px;margin-bottom:8px">🎬</div>
+        <p style="font-size:12px;color:var(--t2);margin-bottom:12px">Highlights couldn't load inline right now. Watch them on YouTube:</p>
+        <a href="https://www.youtube.com/results?search_query=${q}" target="_blank" rel="noopener" class="md-hl-yt">▶ ${home} vs ${away} — Highlights</a>
+      </div>`;
   }
+  if (btn) btn.innerHTML = '✕ Close Highlights';
 }
 
 // ══════════ CALENDAR EXPORT ═══════════════════════════════
@@ -2641,12 +2686,12 @@ function showTab(tab,el){
   curTab=tab;renderCurrentTab();
 }
 function renderCurrentTab(){
-  if(curTab==='fixtures')renderFixtures();
+  if(curTab==='fixtures'){renderFixtures();syncLiveScores();}
   else if(curTab==='live')renderLive();
   else if(curTab==='groups'){renderGroups();syncLiveScores();}   // refresh scores on open
   else if(curTab==='teams')renderTeams();
-  else if(curTab==='stats')renderStats();
-  else if(curTab==='bracket')bkInit();
+  else if(curTab==='stats'){renderStats();syncLiveScores();}
+  else if(curTab==='bracket'){bkInit();syncLiveScores();}        // refresh + auto-fill bracket
 }
 
 // ══════════ INIT ══════════════════════════════════════════
@@ -3474,7 +3519,28 @@ const BK2_QF=[[0,1],[2,3],[4,5],[6,7]];
 const BK2_SF=[[0,1],[2,3]];
 
 function bkInit(){bk2Init();}
-function bk2Init(){bk2State=JSON.parse(localStorage.getItem(BK2_STORE)||'{}');bk2Render();}
+// Auto-fill the bracket from real results: group winners/runners-up, best thirds, and each round's winners
+function bk2AutoFill(){
+  const thirds=[]; let allDone=true;
+  'ABCDEFGHIJKL'.split('').forEach(g=>{
+    const gm=MATCHES.filter(m=>m.stage==='Group '+g);
+    const played=gm.filter(m=>m.hs!==undefined).length;
+    if(gm.length && played===gm.length){
+      const st=calcGroupStandings(g);
+      if(st[0]) bk2State['g_'+g+'_1']=st[0].name;
+      if(st[1]) bk2State['g_'+g+'_2']=st[1].name;
+      if(st[2]) thirds.push(st[2]);
+    } else allDone=false;
+  });
+  if(allDone && thirds.length){
+    thirds.slice().sort((a,b)=>b.pts-a.pts||b.gd-a.gd||b.gf-a.gf).slice(0,8)
+      .forEach((t,i)=>{ bk2State['wc_'+i]=t.name; });
+  }
+  const fill=(prefix,startId,count)=>{ for(let i=0;i<count;i++){ const w=_matchWinner(startId+i); if(w) bk2State[prefix+i]=w; } };
+  fill('r32w_',73,16); fill('r16w_',89,8); fill('qfw_',97,4); fill('sfw_',101,2);
+  bk2Save();
+}
+function bk2Init(){bk2State=JSON.parse(localStorage.getItem(BK2_STORE)||'{}');bk2AutoFill();bk2Render();}
 function bk2Save(){localStorage.setItem(BK2_STORE,JSON.stringify(bk2State));}
 function bk2Reset(){bk2State={};bk2Save();bk2Render();}
 function bk2T(k){return bk2State[k]||null;}
