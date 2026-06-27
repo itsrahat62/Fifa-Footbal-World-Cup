@@ -2470,6 +2470,7 @@ function openMatchDetails(id){
   const m=MATCHES.find(x=>x.id===id); if(!m) return;
   // upcoming / no result → keep the prediction poll instead
   if(!m.espnId || m.hs===undefined){ openPoll(id); return; }
+  if(_hlPlayer){try{_hlPlayer.destroy()}catch(e){} _hlPlayer=null;}   // clear prior match's highlights
   _mdMatch=m; _mdEventId=m.espnId;
   document.getElementById('mdBody').innerHTML='<div class="md-loading"><div class="tv-spinner"></div></div>';
   document.getElementById('matchDetailModal').classList.add('open');
@@ -2479,6 +2480,7 @@ function openMatchDetails(id){
 }
 async function loadMatchDetails(){
   if(!_mdEventId) return;
+  if(_hlPlayer) return;   // highlights are playing — don't wipe them with a refresh
   try{
     const r=await fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/summary?event='+_mdEventId,{cache:'no-store'});
     if(!r.ok) return;
@@ -2542,7 +2544,7 @@ function renderMatchDetails(d){
     ${statsRows?`<div class="md-stats-title">Team Stats</div>${statsRows}`:'<div class="md-nostats">Detailed stats not available for this match.</div>'}
   `;
 }
-function closeMatchDetails(){ document.getElementById('matchDetailModal').classList.remove('open'); clearInterval(_mdTimer); _mdEventId=null; _mdMatch=null; }
+function closeMatchDetails(){ document.getElementById('matchDetailModal').classList.remove('open'); clearInterval(_mdTimer); _mdEventId=null; _mdMatch=null; if(_hlPlayer){try{_hlPlayer.destroy()}catch(e){} _hlPlayer=null;} }
 
 // ── INLINE HIGHLIGHTS (auto-skips embed-blocked videos via the YouTube IFrame API) ──
 let _ytApiReady=null,_hlPlayer=null;
