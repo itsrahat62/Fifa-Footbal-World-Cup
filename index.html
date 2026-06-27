@@ -2830,7 +2830,7 @@ let tvActiveCat = 'all';
 // ════════ DYNAMIC CHANNELS (itsrahat62/livetv-channels — same source as the app) ════════
 // Set TV_PROXY to your Cloudflare Worker URL (see cloudflare-worker.js) to unlock the
 // http / referer-locked channels too. Clean HTTPS channels work without it.
-const TV_PROXY = "";
+const TV_PROXY = "https://tv-proxy.rokon-onnorokom.workers.dev";
 const TV_CHANNELS_URL = "https://cdn.jsdelivr.net/gh/itsrahat62/livetv-channels@main/channels.json";
 let tvAllChannels = null;          // loaded array of {id,name,cat,logo,servers[]}
 let tvSearchQ = '';
