@@ -2356,37 +2356,78 @@ function showTeamDetail(name){
 }
 
 // ══════════ STATS ═════════════════════════════════════════
+// ── Real top scorers / assists, aggregated from ESPN match summaries ──
+let _realScorers=null,_realAssists=null,_scorersLoading=false;
+function _teamIso(name){
+  const k=_teamKey(name);
+  for(const [n,t] of Object.entries(TEAMS)){ if(_teamKey(n)===k) return t.iso; }
+  return null;
+}
+async function loadRealScorers(){
+  if(_realScorers || _scorersLoading) return;
+  const finished=MATCHES.filter(m=>m.espnId && m.hs!==undefined);
+  if(!finished.length) return;
+  _scorersLoading=true;
+  const goals={}, assists={};
+  const one=async(m)=>{
+    try{
+      const r=await fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/summary?event='+m.espnId,{cache:'force-cache'});
+      if(!r.ok) return;
+      const d=await r.json();
+      (d.keyEvents||[]).forEach(e=>{
+        if(!(e.scoringPlay||(e.type&&e.type.text==='Goal'))) return;
+        const team=(e.team&&e.team.displayName)||'';
+        const own=/own goal/i.test(e.text||'');
+        const p=e.participants||[];
+        const scorer=p[0]&&p[0].athlete&&p[0].athlete.displayName;
+        const assist=p[1]&&p[1].athlete&&p[1].athlete.displayName;
+        if(scorer && !own){ goals[scorer]=goals[scorer]||{name:scorer,team,n:0}; goals[scorer].n++; }
+        if(assist){ assists[assist]=assists[assist]||{name:assist,team,n:0}; assists[assist].n++; }
+      });
+    }catch(e){}
+  };
+  for(let i=0;i<finished.length;i+=8){ await Promise.all(finished.slice(i,i+8).map(one)); }
+  _realScorers=Object.values(goals).sort((a,b)=>b.n-a.n).slice(0,12);
+  _realAssists=Object.values(assists).sort((a,b)=>b.n-a.n).slice(0,10);
+  _scorersLoading=false;
+  if(curTab==='stats') renderStats();
+}
+
 function renderStats(){
-  const favs=Object.entries(TEAMS).sort((a,b)=>b[1].strength-a[1].strength).slice(0,8);
+  loadRealScorers();   // fetch real data (async); re-renders when ready
+  // Real "favorites" = current standings leaders (most points across the tournament)
+  const allStandings=[];
+  'ABCDEFGHIJKL'.split('').forEach(g=>calcGroupStandings(g).forEach(t=>{ if(t.p>0) allStandings.push(t); }));
+  const favs=allStandings.sort((a,b)=>b.pts-a.pts||b.gd-a.gd||b.gf-a.gf).slice(0,8).map(t=>[t.name,t]);
+  const realGoals=_realScorers&&_realScorers.length, realAst=_realAssists&&_realAssists.length;
+  const scorers=realGoals?_realScorers:TOP_SCORERS.map(p=>({name:p.name,team:p.team,n:p.goals,iso:p.iso}));
+  const assistsList=realAst?_realAssists:[...TOP_SCORERS].sort((a,b)=>b.assists-a.assists).slice(0,8).map(p=>({name:p.name,team:p.team,n:p.assists,iso:p.iso}));
   document.getElementById('statsGrid').innerHTML=`
   <div class="sc">
-    <h3>🥇 Golden Boot Predictions</h3>
-    ${TOP_SCORERS.map(p=>`<div class="sr">
-      <div class="sr-rank">${p.rank}</div>
-      <div class="sr-flag">${fi(p.iso,28,4)}</div>
-      <div class="sr-info"><div class="sr-name">${p.name}</div><div class="sr-team">${p.team}</div></div>
-      <div><div class="sr-val">${p.goals}<span class="sr-vlbl"> ⚽</span></div></div>
-    </div>`).join('')}
-  </div>
-  <div class="sc">
-    <h3>🎯 Top Assists Predictions</h3>
-    ${[...TOP_SCORERS].sort((a,b)=>b.assists-a.assists).slice(0,8).map((p,i)=>`<div class="sr">
+    <h3>🥇 ${realGoals?'Top Scorers (Live)':'Golden Boot Predictions'}</h3>
+    ${scorers.length?scorers.map((p,i)=>`<div class="sr">
       <div class="sr-rank">${i+1}</div>
-      <div class="sr-flag">${fi(p.iso,28,4)}</div>
-      <div class="sr-info"><div class="sr-name">${p.name}</div><div class="sr-team">${p.team}</div></div>
-      <div><div class="sr-val">${p.assists}<span class="sr-vlbl"> 🎯</span></div></div>
-    </div>`).join('')}
+      <div class="sr-flag">${fi(p.iso||_teamIso(p.team),28,4)}</div>
+      <div class="sr-info"><div class="sr-name">${p.name}</div><div class="sr-team">${p.team||''}</div></div>
+      <div><div class="sr-val">${p.n}<span class="sr-vlbl"> ⚽</span></div></div>
+    </div>`).join(''):'<div class="sr" style="opacity:.6">No goals yet</div>'}
   </div>
   <div class="sc">
-    <h3>🏆 AI Tournament Favorites</h3>
-    ${favs.map(([name,t],i)=>`<div class="sr">
+    <h3>🎯 ${realAst?'Top Assists (Live)':'Top Assists Predictions'}</h3>
+    ${assistsList.length?assistsList.map((p,i)=>`<div class="sr">
+      <div class="sr-rank">${i+1}</div>
+      <div class="sr-flag">${fi(p.iso||_teamIso(p.team),28,4)}</div>
+      <div class="sr-info"><div class="sr-name">${p.name}</div><div class="sr-team">${p.team||''}</div></div>
+      <div><div class="sr-val">${p.n}<span class="sr-vlbl"> 🎯</span></div></div>
+    </div>`).join(''):'<div class="sr" style="opacity:.6">No assists yet</div>'}
+  </div>
+  <div class="sc">
+    <h3>🏆 ${favs.length?'Tournament Leaders (Points)':'AI Tournament Favorites'}</h3>
+    ${(favs.length?favs:Object.entries(TEAMS).sort((a,b)=>b[1].strength-a[1].strength).slice(0,8)).map(([name,t],i)=>`<div class="sr">
       <div class="sr-rank">${i+1}</div>
       <div class="sr-flag">${fi(t.iso,28,4)}</div>
-      <div class="sr-info"><div class="sr-name">${name}</div><div class="sr-team">Group ${t.group}</div></div>
-      <div style="display:flex;align-items:center;gap:8px;min-width:100px">
-        <div class="rank-bar"><div class="rank-fill" style="width:${t.strength}%"></div></div>
-        <span style="font-size:12px;font-weight:800;color:var(--gold)">${t.strength}</span>
-      </div>
+      <div class="sr-info"><div class="sr-name">${name}</div><div class="sr-team">Group ${t.group}${t.p?' · '+t.p+' played':''}</div></div>
+      <div><div class="sr-val">${t.pts!==undefined?t.pts:t.strength}<span class="sr-vlbl">${t.pts!==undefined?' pts':''}</span></div></div>
     </div>`).join('')}
   </div>
   <div class="sc">
