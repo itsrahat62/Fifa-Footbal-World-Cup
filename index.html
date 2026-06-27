@@ -2828,11 +2828,14 @@ const tvPresetChannels = [
 ];
 const tvCategories = [
   { key: 'all',    label: 'All' },
+  { key: 'wc',     label: '⚽ World Cup' },
   { key: 'sports', label: '🏆 Sports' },
   { key: 'news',   label: '📰 News' },
   { key: 'ent',    label: '🎬 Entertainment' }
 ];
-let tvActiveCat = 'all';
+// World Cup football channels = the verified live feeds, DRM match channels, and football sports feeds
+const isWCChannel = (ch) => /^wcl?\d/.test(ch.id) || ['sp1','sp2','sp3','sp7','sp8','sp9'].includes(ch.id);
+let tvActiveCat = 'wc';
 
 // ════════ DYNAMIC CHANNELS (itsrahat62/livetv-channels — same source as the app) ════════
 // Set TV_PROXY to your Cloudflare Worker URL (see cloudflare-worker.js) to unlock the
@@ -3363,7 +3366,9 @@ function renderTVPresets() {
   }
   tabsEl.innerHTML = '';
   tvCategories.forEach(c => {
-    const count = c.key === 'all' ? tvPresetChannels.length : tvPresetChannels.filter(ch => ch.cat === c.key).length;
+    const count = c.key === 'all' ? tvPresetChannels.length
+                : c.key === 'wc' ? tvPresetChannels.filter(isWCChannel).length
+                : tvPresetChannels.filter(ch => ch.cat === c.key).length;
     const btn = document.createElement('button');
     btn.className = 'tv-cat-tab' + (tvActiveCat === c.key ? ' active' : '');
     btn.innerHTML = `${c.label} <span class="tv-cat-count">${count}</span>`;
@@ -3412,7 +3417,9 @@ function renderTVPresets() {
 
   let firstItem = null;
   sections.forEach(([catKey, catLabel]) => {
-    const chans = tvPresetChannels.filter(ch => ch.cat === catKey);
+    const chans = catKey === 'wc'
+      ? tvPresetChannels.filter(isWCChannel)
+      : tvPresetChannels.filter(ch => ch.cat === catKey);
     if (!chans.length) return;
     if (tvActiveCat === 'all') {
       const hdr = document.createElement('div');
