@@ -2847,20 +2847,35 @@ async function loadAllChannels(){
   }catch(e){ console.warn('channels.json load failed', e); }
   _tvChannelsLoading = false;
 }
-// pick a playable server + route through the proxy when the browser can't reach it directly
-function playRepoChannel(ch){
-  const s = (ch.servers||[])[0]; if(!s||!s.url) return;
+// pick a playable server + route through the proxy when the browser can't reach it directly.
+// Auto-tries the channel's next server if one doesn't start (some upstreams block Cloudflare IPs).
+let _repoWatch = null, _repoToken = 0;
+function playRepoChannel(ch, srvIdx){
+  srvIdx = srvIdx || 0;
+  const servers = ch.servers || [];
+  const s = servers[srvIdx]; if(!s || !s.url) return;
+  const token = ++_repoToken;
   let url = s.url;
   const type = (s.type==='dash'||/\.mpd(\?|$)/i.test(url)) ? 'dash' : 'hls';
   const needsProxy = url.startsWith('http://') || s.referer || s.ua;
   if(needsProxy){
-    if(!TV_PROXY){ alert('⚠️ This channel needs the proxy. Deploy the Cloudflare Worker (cloudflare-worker.js) and set TV_PROXY to enable http / header-locked channels.'); return; }
+    if(!TV_PROXY){ alert('⚠️ This channel needs the proxy. Deploy the Cloudflare Worker (cloudflare-worker.js) and set TV_PROXY.'); return; }
     url = TV_PROXY.replace(/\/+$/,'') + '/?url=' + encodeURIComponent(url)
         + (s.referer ? '&ref=' + encodeURIComponent(s.referer) : '')
         + (s.ua ? '&ua=' + encodeURIComponent(s.ua) : '');
   }
   tvHighlightActive(url);
-  playLiveTVStream(type, url, ch.name, s.key||'');
+  playLiveTVStream(type, url, ch.name + (srvIdx ? ` · server ${srvIdx+1}` : ''), s.key||'');
+  // watchdog: if it hasn't started in 9s, try the next server
+  clearTimeout(_repoWatch);
+  if(srvIdx + 1 < servers.length){
+    const video = document.getElementById('tv-player');
+    _repoWatch = setTimeout(() => {
+      if(token !== _repoToken) return;            // user switched channel
+      if(video && video.currentTime > 0) return;  // already playing
+      playRepoChannel(ch, srvIdx + 1);
+    }, 9000);
+  }
 }
 let tvSavedStreams = [];
 let tvLoadedPlaylist = [];
