@@ -1872,7 +1872,9 @@ function makeCard(m){
   const t=toLocalTime(m.utc),dt=toLocalDate(m.utc),cd=countdown(m.utc);
   const pk=`match_${m.id}`,votes=pollVotes[pk]||{home:0,draw:0,away:0},tv=votes.home+votes.draw+votes.away;
   let prob=null;
-  if(!m.tbd&&h.strength&&a.strength)prob=winProb(h.strength,a.strength);
+  if(!m.tbd && m.hs===undefined && h.strength && a.strength)prob=winProb(h.strength,a.strength);  // no prediction once there's a real score
+  const done = m.hs!==undefined && !m.isLive;  // finished
+  const hw = m.hs!==undefined && m.hs>m.as, aw = m.hs!==undefined && m.as>m.hs;
 
   const probBar=prob?`
   <div class="mc-prob" style="padding:0 20px 4px">
@@ -1890,21 +1892,21 @@ function makeCard(m){
 
   const liveBadge = m.isLive ? `<span class="live-pill" style="margin-left:8px"><span class="live-dot"></span> LIVE</span>` : '';
 
-  return`<div class="mc" onclick="openPoll(${m.id})">
+  return`<div class="mc" onclick="openMatchDetails(${m.id})">
   <div class="mc-top">
     <span class="mc-stage">${m.stage}</span>
     ${liveBadge}
     <span class="mc-venue">📍 ${m.venue}, ${m.city}</span>
   </div>
   <div class="mc-body">
-    <div class="mc-team">
+    <div class="mc-team${hw?' mc-winner':''}">
       <div class="mc-flag">${fi(h.iso,52,6)}</div>
       <div class="mc-name${m.home.length>10?' sm':''}">${m.home}</div>
     </div>
     <div class="mc-center">
-      ${m.isLive && m.hs !== undefined ? `
-        <div class="mc-score" style="color:var(--red); font-size:28px; line-height: 1.1; margin-bottom: 2px;">${m.hs} – ${m.as}</div>
-        <div style="font-size:11px; font-weight:800; color:var(--red); letter-spacing:1px; margin-bottom:4px;">LIVE ${m.liveDetail || ''}</div>
+      ${m.hs !== undefined ? `
+        <div class="mc-score" style="color:${m.isLive?'var(--red)':'#fff'}; font-size:28px; line-height: 1.1; margin-bottom: 2px;">${m.hs} – ${m.as}</div>
+        <div style="font-size:11px; font-weight:800; color:${m.isLive?'var(--red)':'#2ecc71'}; letter-spacing:1px; margin-bottom:4px;">${m.isLive ? 'LIVE '+(m.liveDetail||'') : 'FT'}</div>
       ` : `
         <div class="mc-vs">VS</div>
         <div class="mc-time">${t}</div>
@@ -1912,16 +1914,18 @@ function makeCard(m){
       <div class="mc-date">${dt}</div>
       <div class="mc-tz">${getTZLabel()}</div>
     </div>
-    <div class="mc-team">
+    <div class="mc-team${aw?' mc-winner':''}">
       <div class="mc-flag">${fi(a.iso,52,6)}</div>
       <div class="mc-name${m.away.length>10?' sm':''}">${m.away}</div>
     </div>
   </div>
   ${probBar}
   <div class="mc-foot">
-    ${m.isLive ? `<span class="mc-cd" style="background:rgba(255,77,109,0.15); color:#ff4d6d; font-weight: 700;">⏱ LIVE NOW</span>` : cd?`<span class="mc-cd">⏱ ${cd}</span>`:'<span style="font-size:10px;color:var(--t3)">TBD</span>'}
-    <button class="mc-poll-btn" onclick="event.stopPropagation();openPoll(${m.id})">
-      🗳️ ${tv>0?tv+' votes':'Vote'}
+    ${m.isLive ? `<span class="mc-cd" style="background:rgba(255,77,109,0.15); color:#ff4d6d; font-weight: 700;">⏱ LIVE NOW</span>`
+      : done ? `<span class="mc-cd" style="background:rgba(46,204,113,0.12); color:#2ecc71; font-weight:700;">✓ Full Time</span>`
+      : cd?`<span class="mc-cd">⏱ ${cd}</span>`:'<span style="font-size:10px;color:var(--t3)">TBD</span>'}
+    <button class="mc-poll-btn" onclick="event.stopPropagation();${done?'openMatchDetails':'openPoll'}(${m.id})">
+      ${done?'📊 Result':('🗳️ '+(tv>0?tv+' votes':'Vote'))}
     </button>
   </div>
 </div>`;
