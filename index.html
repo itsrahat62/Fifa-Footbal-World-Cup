@@ -3715,42 +3715,50 @@ let bk2State={};
 let bk2PickCb=null;
 let bkPickerTarget=null;
 
-// R32 matchups: each entry = [stateKeyForSideA, stateKeyForSideB]
-const BK2_R32=[
-  ['g_A_1','g_B_2'],['g_C_1','g_D_2'],['g_E_1','g_F_2'],['g_G_1','g_H_2'],
-  ['g_I_1','g_J_2'],['g_K_1','g_L_2'],['g_B_1','g_A_2'],['g_D_1','g_C_2'],
-  ['g_F_1','g_E_2'],['g_H_1','g_G_2'],['g_J_1','g_I_2'],['g_L_1','g_K_2'],
-  ['wc_0','wc_1'],['wc_2','wc_3'],['wc_4','wc_5'],['wc_6','wc_7'],
-];
-// R16 matchups: [r32MatchIdxA, r32MatchIdxB]
+// Visual order of R32 match IDs — chosen so adjacent pairs feed the same R16 match
+// Left col (top→bottom):  73,85,74,86,75,87,76,88
+// Right col (top→bottom): 77,79,78,80,81,83,82,84
+// R16 pairings: W73vsW85, W74vsW86, W75vsW87, W76vsW88, W77vsW79, W78vsW80, W81vsW83, W82vsW84
+const R32_VIS=[73,85,74,86,75,87,76,88,77,79,78,80,81,83,82,84];
+const BK2_R32=Array.from({length:16},(_,i)=>['r32h_'+i,'r32a_'+i]);
 const BK2_R16=[[0,1],[2,3],[4,5],[6,7],[8,9],[10,11],[12,13],[14,15]];
 const BK2_QF=[[0,1],[2,3],[4,5],[6,7]];
 const BK2_SF=[[0,1],[2,3]];
 
 function bkInit(){bk2Init();}
-// Auto-fill the bracket from real results: group winners/runners-up, best thirds, and each round's winners
+const BK2_VER=2;// bump when bracket structure changes to clear stale localStorage
+// Auto-fill bracket: R32 teams directly from MATCHES (confirmed bracket), winners from results
 function bk2AutoFill(){
-  const thirds=[]; let allDone=true;
+  // Primary: fill R32 home/away directly from MATCHES in visual order
+  R32_VIS.forEach((mid,vi)=>{
+    const m=MATCHES.find(mm=>mm.id===mid);
+    if(m&&m.home&&TEAMS[m.home])bk2State['r32h_'+vi]=m.home;
+    if(m&&m.away&&TEAMS[m.away])bk2State['r32a_'+vi]=m.away;
+  });
+  // Secondary: derive group 1st/2nd from standings if scores entered (for group picker display)
+  const thirds=[];
   'ABCDEFGHIJKL'.split('').forEach(g=>{
     const gm=MATCHES.filter(m=>m.stage==='Group '+g);
     const played=gm.filter(m=>m.hs!==undefined).length;
-    if(gm.length && played===gm.length){
+    if(gm.length&&played===gm.length){
       const st=calcGroupStandings(g);
-      if(st[0]) bk2State['g_'+g+'_1']=st[0].name;
-      if(st[1]) bk2State['g_'+g+'_2']=st[1].name;
-      if(st[2]) thirds.push(st[2]);
-    } else allDone=false;
+      if(st[0])bk2State['g_'+g+'_1']=st[0].name;
+      if(st[1])bk2State['g_'+g+'_2']=st[1].name;
+      if(st[2])thirds.push(st[2]);
+    }
   });
-  if(allDone && thirds.length){
+  if(thirds.length){
     thirds.slice().sort((a,b)=>b.pts-a.pts||b.gd-a.gd||b.gf-a.gf).slice(0,8)
-      .forEach((t,i)=>{ bk2State['wc_'+i]=t.name; });
+      .forEach((t,i)=>{bk2State['wc_'+i]=t.name;});
   }
-  const fill=(prefix,startId,count)=>{ for(let i=0;i<count;i++){ const w=_matchWinner(startId+i); if(w) bk2State[prefix+i]=w; } };
-  fill('r32w_',73,16); fill('r16w_',89,8); fill('qfw_',97,4); fill('sfw_',101,2);
+  // Fill R32 winners in visual order; R16/QF/SF by match order
+  R32_VIS.forEach((mid,vi)=>{const w=_matchWinner(mid);if(w)bk2State['r32w_'+vi]=w;});
+  const fill=(prefix,startId,count)=>{for(let i=0;i<count;i++){const w=_matchWinner(startId+i);if(w)bk2State[prefix+i]=w;}};
+  fill('r16w_',89,8);fill('qfw_',97,4);fill('sfw_',101,2);
   bk2Save();
 }
-function bk2Init(){bk2State=JSON.parse(localStorage.getItem(BK2_STORE)||'{}');bk2AutoFill();bk2Render();}
-function bk2Save(){localStorage.setItem(BK2_STORE,JSON.stringify(bk2State));}
+function bk2Init(){const s=JSON.parse(localStorage.getItem(BK2_STORE)||'{}');bk2State=(s._ver===BK2_VER)?s:{_ver:BK2_VER};bk2AutoFill();bk2Render();}
+function bk2Save(){bk2State._ver=BK2_VER;localStorage.setItem(BK2_STORE,JSON.stringify(bk2State));}
 function bk2Reset(){bk2State={};bk2Save();bk2Render();}
 function bk2T(k){return bk2State[k]||null;}
 
@@ -3930,7 +3938,11 @@ function bk2Render(){
 
 function bk2RenderKnockout(container){
   if(!container)return;
-  const CW=138,CH=46,RG=22,LH=22,MG=6;
+  const CH=46,LH=22,MG=6;
+  // Responsive sizing: expand to fill available width, no horizontal scroll
+  const avW=Math.max(700,((container.parentElement||document.body).clientWidth||window.innerWidth||1200)-24);
+  const RG=Math.max(10,Math.round(avW/85));
+  const CW=Math.max(95,Math.floor((avW-8*RG)/9));
   const H=8*(CH+MG)-MG;
   const TW=9*CW+8*RG;
   const cx=Array.from({length:9},(_,i)=>i*(CW+RG));
