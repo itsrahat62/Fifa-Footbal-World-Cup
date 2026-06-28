@@ -764,12 +764,13 @@ select option{background:#0d1a2e;color:#fff}
 .bk-pick-btn:hover{border-color:rgba(245,197,24,0.4);background:rgba(245,197,24,0.1)}
 .bk-picker-close{width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.55);border-radius:var(--r2);padding:11px;cursor:pointer;font-size:12px;font-weight:700;margin-top:12px;transition:all .2s;font-family:inherit}
 .bk-picker-close:hover{background:rgba(255,255,255,0.1);color:#fff}
-.bk-vc{background:rgba(8,18,40,0.95);border:1px solid rgba(255,255,255,0.13);border-radius:7px;overflow:hidden;display:flex;flex-direction:column;}
-.bk-vt{display:flex;align-items:center;gap:5px;padding:3px 7px;flex:1;cursor:default;transition:background .12s;border-bottom:1px solid rgba(255,255,255,0.07);font-size:11px;font-weight:600;color:var(--t1);}
+.bk-vc{background:linear-gradient(180deg,rgba(10,22,50,0.98) 0%,rgba(5,12,30,0.99) 100%);border:1.5px solid rgba(255,255,255,0.14);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 4px 20px rgba(0,0,0,0.55);}
+.bk-vt{display:flex;align-items:center;gap:8px;padding:7px 10px;flex:1;cursor:default;transition:background .15s,border-color .15s;border-bottom:1px solid rgba(255,255,255,0.08);font-size:13px;font-weight:700;color:var(--t1);min-height:36px;}
 .bk-vt:last-child{border-bottom:none;}
-.bk-vt.clk{cursor:pointer;}.bk-vt.clk:hover{background:rgba(255,255,255,0.09);}
-.bk-vt.win{background:rgba(245,197,24,0.17);color:var(--gold);}
-.bk-vt.los{opacity:.38;}
+.bk-vt.clk{cursor:pointer;}.bk-vt.clk:hover{background:rgba(255,255,255,0.1);}
+.bk-vt.win{background:linear-gradient(90deg,rgba(245,197,24,0.22) 0%,rgba(245,197,24,0.06) 100%);color:var(--gold);border-left:3px solid var(--gold);}
+.bk-vt.los{opacity:.32;}
+.bk-vc-tbd{display:flex;align-items:center;justify-content:center;flex:1;font-size:11px;color:var(--t3);font-style:italic;font-weight:600;letter-spacing:.5px;min-height:36px;}
 .bk2-rlbl-center{font-size:9px;font-weight:800;color:var(--gold);letter-spacing:2px;text-transform:uppercase;text-align:center;}
 @media(max-width:768px){.bk2-gg{grid-template-columns:repeat(2,1fr)}.bk2-wc-grid{grid-template-columns:repeat(2,1fr)}}
 
@@ -3949,11 +3950,11 @@ function bk2Render(){
 
 function bk2RenderKnockout(container){
   if(!container)return;
-  const CH=46,LH=22,MG=6;
+  const CH=74,LH=40,MG=20;
   // Responsive sizing: expand to fill available width, no horizontal scroll
-  const avW=Math.max(700,((container.parentElement||document.body).clientWidth||window.innerWidth||1200)-24);
-  const RG=Math.max(10,Math.round(avW/85));
-  const CW=Math.max(95,Math.floor((avW-8*RG)/9));
+  const avW=Math.max(1200,((container.parentElement||document.body).clientWidth||window.innerWidth||1440)-24);
+  const RG=Math.max(24,Math.round(avW/55));
+  const CW=Math.max(155,Math.floor((avW-8*RG)/9));
   const H=8*(CH+MG)-MG;
   const TW=9*CW+8*RG;
   const cx=Array.from({length:9},(_,i)=>i*(CW+RG));
@@ -3971,7 +3972,7 @@ function bk2RenderKnockout(container){
     const l=document.createElementNS('http://www.w3.org/2000/svg','line');
     l.setAttribute('x1',x1.toFixed(1));l.setAttribute('y1',y1.toFixed(1));
     l.setAttribute('x2',x2.toFixed(1));l.setAttribute('y2',y2.toFixed(1));
-    l.setAttribute('stroke','#c0392b');l.setAttribute('stroke-width','1.5');
+    l.setAttribute('stroke','rgba(192,57,43,0.85)');l.setAttribute('stroke-width','2.5');
     l.setAttribute('stroke-linecap','round');svg.appendChild(l);
   }
 
@@ -4005,9 +4006,9 @@ function bk2RenderKnockout(container){
       d.className='bk-vt'+(isW?' win':isL?' los':fn?' clk':'');
       if(fn)d.onclick=fn;
       if(t){
-        d.innerHTML=fi(TEAMS[t]?.iso||'',15,3)+'<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px">'+t+'</span>';
+        d.innerHTML=fi(TEAMS[t]?.iso||'',18,3)+'<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;font-weight:700">'+t+'</span>';
         if(isW&&clearFn){const xb=document.createElement('span');xb.className='bk2-mcx';xb.textContent='✕';xb.onclick=e=>{e.stopPropagation();clearFn();};d.appendChild(xb);}
-      }else{d.innerHTML='<span style="font-size:10px;color:var(--t3);font-style:italic">TBD</span>';}
+      }else{d.innerHTML='<span style="font-size:11px;color:var(--t3);font-style:italic;font-weight:600;letter-spacing:.5px">TBD</span>';}
       return d;
     }
     div.appendChild(row(tA,winner===tA,!!(winner&&winner!==tA),canPick&&fnA?fnA:null));
@@ -4045,8 +4046,12 @@ function bk2RenderKnockout(container){
 
   // Round labels at top
   ['R32','R16','QF','SF','FINAL · Jul 19','SF','QF','R16','R32'].forEach((lbl,ci)=>{
+    const isF=ci===4;
     const ld=document.createElement('div');
-    ld.style.cssText=`position:absolute;left:${cx[ci]}px;top:0;width:${CW}px;text-align:center;font-size:9px;font-weight:800;color:var(--gold);letter-spacing:${ci===4?'1':'2'}px;text-transform:uppercase;`;
+    ld.style.cssText=`position:absolute;left:${cx[ci]}px;top:0;width:${CW}px;text-align:center;`
+      +`font-size:${isF?'13':'11'}px;font-weight:900;color:${isF?'var(--gold)':'rgba(245,197,24,0.75)'};`
+      +`letter-spacing:${isF?'1.5':'2.5'}px;text-transform:uppercase;padding:4px 0;`
+      +(isF?'text-shadow:0 0 12px rgba(245,197,24,0.45);':'');
     ld.textContent=lbl;container.appendChild(ld);
   });
 }
