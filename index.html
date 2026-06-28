@@ -3676,6 +3676,9 @@ function renderTVPlaylistChannels(channels) {
   document.getElementById('todayMatchModal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeTodayMatches();});
   document.getElementById('matchDetailModal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeMatchDetails();});
   document.addEventListener('keydown',e=>{if(e.key==='Escape'){closePoll();bkClosePicker();closeTodayMatches();closeMatchDetails();}});
+  // Re-render bracket on resize so it always fills the available width exactly
+  let _resizeTmr;
+  window.addEventListener('resize',()=>{clearTimeout(_resizeTmr);_resizeTmr=setTimeout(()=>{if(curTab==='bracket')bk2Render();},120);});
   setTimeout(showTodayMatches,500);
 })();
 
@@ -3951,10 +3954,11 @@ function bk2Render(){
 function bk2RenderKnockout(container){
   if(!container)return;
   const CH=74,LH=40,MG=20;
-  // Responsive sizing: expand to fill available width, no horizontal scroll
-  const avW=Math.max(1200,((container.parentElement||document.body).clientWidth||window.innerWidth||1440)-24);
-  const RG=Math.max(24,Math.round(avW/55));
-  const CW=Math.max(155,Math.floor((avW-8*RG)/9));
+  // Exact-fit sizing: account for .main max-width:1400 + padding:24px each side
+  const iW=window.innerWidth||1280;
+  const avW=Math.max(900,Math.min(1400,iW)-52);  // 52 = 2×24px padding + scrollbar
+  const RG=Math.max(14,Math.round(avW*0.016));    // ~1.6% of width per gap
+  const CW=Math.max(100,Math.floor((avW-8*RG)/9)); // fills remaining evenly → TW ≤ avW
   const H=8*(CH+MG)-MG;
   const TW=9*CW+8*RG;
   const cx=Array.from({length:9},(_,i)=>i*(CW+RG));
