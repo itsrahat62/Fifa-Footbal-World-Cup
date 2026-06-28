@@ -1641,7 +1641,7 @@ let selectedTZ=localStorage.getItem('wc2026_tz')||'Asia/Dhaka';
 const TEAMS={
   'Mexico':{iso:'mx',strength:80,group:'A'},'South Africa':{iso:'za',strength:64,group:'A'},
   'South Korea':{iso:'kr',strength:78,group:'A'},'Czechia':{iso:'cz',strength:76,group:'A'},
-  'Canada':{iso:'ca',strength:76,group:'B'},'Bosnia & Herz.':{iso:'ba',strength:72,group:'B'},
+  'Canada':{iso:'ca',strength:76,group:'B'},'Bosnia & Herzegovina':{iso:'ba',strength:72,group:'B'},
   'Qatar':{iso:'qa',strength:65,group:'B'},'Switzerland':{iso:'ch',strength:80,group:'B'},
   'Brazil':{iso:'br',strength:92,group:'C'},'Morocco':{iso:'ma',strength:82,group:'C'},
   'Haiti':{iso:'ht',strength:55,group:'C'},'Scotland':{iso:'gb-sct',strength:70,group:'C'},
@@ -1687,12 +1687,12 @@ const MATCHES=[
   {id:5,stage:'Group A',home:'Czechia',away:'Mexico',utc:'2026-06-25T00:00:00Z',venue:'Estadio Azteca',city:'Mexico City'},
   {id:6,stage:'Group A',home:'South Africa',away:'South Korea',utc:'2026-06-25T00:00:00Z',venue:'Estadio BBVA',city:'Guadalupe'},
   // GROUP B
-  {id:7,stage:'Group B',home:'Canada',away:'Bosnia & Herz.',utc:'2026-06-11T19:00:00Z',venue:'BMO Field',city:'Toronto',hs:1,as:1},
+  {id:7,stage:'Group B',home:'Canada',away:'Bosnia & Herzegovina',utc:'2026-06-11T19:00:00Z',venue:'BMO Field',city:'Toronto',hs:1,as:1},
   {id:8,stage:'Group B',home:'Qatar',away:'Switzerland',utc:'2026-06-12T19:00:00Z',venue:"Levi's Stadium",city:'Santa Clara, CA'},
-  {id:9,stage:'Group B',home:'Switzerland',away:'Bosnia & Herz.',utc:'2026-06-19T02:00:00Z',venue:'SoFi Stadium',city:'Inglewood, CA'},
+  {id:9,stage:'Group B',home:'Switzerland',away:'Bosnia & Herzegovina',utc:'2026-06-19T02:00:00Z',venue:'SoFi Stadium',city:'Inglewood, CA'},
   {id:10,stage:'Group B',home:'Canada',away:'Qatar',utc:'2026-06-19T05:00:00Z',venue:'BC Place',city:'Vancouver'},
   {id:11,stage:'Group B',home:'Switzerland',away:'Canada',utc:'2026-06-25T02:00:00Z',venue:'BC Place',city:'Vancouver'},
-  {id:12,stage:'Group B',home:'Bosnia & Herz.',away:'Qatar',utc:'2026-06-25T02:00:00Z',venue:'Lumen Field',city:'Seattle, WA'},
+  {id:12,stage:'Group B',home:'Bosnia & Herzegovina',away:'Qatar',utc:'2026-06-25T02:00:00Z',venue:'Lumen Field',city:'Seattle, WA'},
   // GROUP C
   {id:13,stage:'Group C',home:'Brazil',away:'Morocco',utc:'2026-06-13T22:00:00Z',venue:'MetLife Stadium',city:'E. Rutherford, NJ'},
   {id:14,stage:'Group C',home:'Haiti',away:'Scotland',utc:'2026-06-14T01:00:00Z',venue:'Gillette Stadium',city:'Foxborough, MA'},
@@ -2150,14 +2150,15 @@ function renderLive(){
 function _teamKey(n){
   // NFD splits accents into combining marks; the [^a-z0-9] strip then removes them (Türkiye→turkiye, Curaçao→curacao)
   let k=(n||'').toLowerCase().normalize('NFD').replace(/&/g,'and').replace(/[^a-z0-9]/g,'');
-  const alias={ unitedstates:'usa', bosniaherzegovina:'bosniaandherz', korearepublic:'southkorea',
-    irian:'iran', iranislamicrepublic:'iran', turkey:'turkiye', cotedivoire:'ivorycoast', czechrepublic:'czechia',
-    congodr:'drcongo' };
+  const alias={ unitedstates:'usa', bosniaherzegovina:'bosniaandherz', bosniaandherzegovina:'bosniaandherz',
+    korearepublic:'southkorea', irian:'iran', iranislamicrepublic:'iran', turkey:'turkiye',
+    cotedivoire:'ivorycoast', czechrepublic:'czechia', congodr:'drcongo',
+    capeverde:'capeverde', ivorycoast:'ivorycoast', drcongo:'drcongo' };
   return alias[k]||k;
 }
 async function syncLiveScores(){
   try{
-    const r=await fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260611-20260712',{cache:'no-store'});
+    const r=await fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260611-20260720',{cache:'no-store'});
     if(!r.ok) return;
     const data=await r.json();
     let changed=false;
@@ -2184,11 +2185,14 @@ async function syncLiveScores(){
       });
     });
     if(resolveKnockoutTeams()) changed=true;           // auto-fill bracket as groups/rounds finish
-    if(changed && typeof curTab!=='undefined'){
-      if(curTab==='groups') renderGroups();
-      else if(curTab==='fixtures') renderFixtures();
-      else if(curTab==='live') renderLive();
-      else if(curTab==='bracket' && typeof bkInit==='function') bkInit();
+    if(changed){
+      if(typeof bk2AutoFill==='function'){bk2AutoFill();if(typeof bk2Save==='function')bk2Save();}
+      if(typeof curTab!=='undefined'){
+        if(curTab==='groups') renderGroups();
+        else if(curTab==='fixtures') renderFixtures();
+        else if(curTab==='live') renderLive();
+        else if(curTab==='bracket' && typeof bkInit==='function') bkInit();
+      }
     }
   }catch(e){ /* offline / blocked → keep existing scores */ }
 }
