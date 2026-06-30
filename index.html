@@ -2159,7 +2159,12 @@ function _teamKey(n){
 }
 async function syncLiveScores(){
   try{
-    const r=await fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260611-20260720',{cache:'no-store'});
+    // Rolling 5-day window (2 days back → 2 days ahead) so we always capture today's matches
+    const now=new Date();
+    const fmt=d=>d.toISOString().slice(0,10).replace(/-/g,'');
+    const d0=fmt(new Date(now.getTime()-2*864e5));  // 2 days ago
+    const d1=fmt(new Date(now.getTime()+2*864e5));  // 2 days from now
+    const r=await fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=${d0}-${d1}`,{cache:'no-store'});
     if(!r.ok) return;
     const data=await r.json();
     let changed=false;
@@ -3669,8 +3674,18 @@ function renderTVPlaylistChannels(channels) {
   setInterval(()=>{ if(curTab==='fixtures') renderFixtures(); },60000);
   // Auto-refresh group standings every 60s
   setInterval(()=>{ if(curTab==='groups') renderGroups(); },60000);
-  // Pull live/finished scores from ESPN every 60s → standings + fixtures auto-update as games end
-  setInterval(syncLiveScores, 60000);
+  // Smart polling: every 30s if a match is live or just ended (<90 min ago), else every 90s
+  function smartSync(){
+    const now=Date.now();
+    const hasActive=MATCHES.some(m=>{
+      if(!m.utc)return false;
+      const kick=new Date(m.utc).getTime();
+      return now>=kick && now<=kick+105*60000; // within kickoff + 105 min window
+    });
+    syncLiveScores();
+    setTimeout(smartSync, hasActive?30000:90000);
+  }
+  setTimeout(smartSync,30000); // first smart poll 30s after initial syncLiveScores()
   document.getElementById('pollModal').addEventListener('click',e=>{if(e.target===e.currentTarget)closePoll();});
   document.getElementById('bkPickerModal').addEventListener('click',e=>{if(e.target===e.currentTarget)bkClosePicker();});
   document.getElementById('todayMatchModal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeTodayMatches();});
