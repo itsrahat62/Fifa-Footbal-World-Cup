@@ -2172,20 +2172,29 @@ async function syncLiveScores(){
       const comp=(ev.competitions||[])[0]; if(!comp) return;
       const state=ev.status&&ev.status.type&&ev.status.type.state;   // 'pre' | 'in' | 'post'
       const detail=ev.status&&ev.status.type&&(ev.status.type.detail||ev.status.type.shortDetail||'');
-      const byKey={};
-      (comp.competitors||[]).forEach(c=>{ const s=parseInt(c.score,10); byKey[_teamKey(c.team&&c.team.displayName)]=isNaN(s)?null:s; });
+      const byKey={}, winKey={};
+      (comp.competitors||[]).forEach(c=>{
+        const k=_teamKey(c.team&&c.team.displayName);
+        const s=parseInt(c.score,10);
+        byKey[k]=isNaN(s)?null:s;
+        if(c.winner===true) winKey[k]=true;  // ESPN sets winner=true on PK winner too
+      });
       MATCHES.forEach(m=>{
         const hk=_teamKey(m.home), ak=_teamKey(m.away);
         if(!(hk in byKey) || !(ak in byKey)) return;                 // not this match
         if(m.espnId!==ev.id) m.espnId=ev.id;                         // capture id for match details (any state)
-        
+
         if(state==='in' && byKey[hk]!=null && byKey[ak]!=null){
           if(!m.isLive || m.hs!==byKey[hk] || m.as!==byKey[ak] || m.liveDetail!==detail){
             m.hs=byKey[hk]; m.as=byKey[ak]; m.isLive=true; m.liveDetail=detail; changed=true;
           }
         } else if(state==='post' && byKey[hk]!=null && byKey[ak]!=null){
-          if(m.isLive || m.hs!==byKey[hk] || m.as!==byKey[ak]){
-            m.hs=byKey[hk]; m.as=byKey[ak]; m.isLive=false; delete m.liveDetail; changed=true;
+          // Penalty winner: when scores equal, use ESPN's winner flag
+          const pkW=byKey[hk]===byKey[ak]?(winKey[hk]?m.home:winKey[ak]?m.away:null):null;
+          if(m.isLive || m.hs!==byKey[hk] || m.as!==byKey[ak] || m.pkWinner!==pkW){
+            m.hs=byKey[hk]; m.as=byKey[ak]; m.isLive=false; delete m.liveDetail;
+            if(pkW) m.pkWinner=pkW; else delete m.pkWinner;
+            changed=true;
           }
         }
       });
@@ -2230,8 +2239,9 @@ function calcGroupStandings(g){
 function _matchWinner(id){
   const m=MATCHES.find(x=>x.id===id);
   if(!m||m.hs===undefined||m.as===undefined) return null;
-  if(m.hs>m.as) return m.home; if(m.as>m.hs) return m.away;
-  return null;                                 // draw (would go to penalties) — leave unresolved
+  if(m.hs>m.as) return m.home;
+  if(m.as>m.hs) return m.away;
+  return m.pkWinner||null;  // draw → use penalty shootout winner if available
 }
 function _isSeedCode(s){ return /^([12][A-L]|3rd-[1-8]|W\d+)$/.test(s); }
 function resolveKnockoutTeams(){
@@ -4014,7 +4024,7 @@ function bk2RenderKnockout(container){
   ln(cx[5],yc(1,0),cx[4]+CW,yc(1,0));
 
   // Match card renderer
-  function card(colIdx,n,idx,tA,tB,winner,fnA,fnB,clearFn){
+  function card(colIdx,n,idx,tA,tB,winner,fnA,fnB,clearFn,isPK){
     const cy=yc(n,idx);
     const div=document.createElement('div');
     div.style.cssText=`position:absolute;left:${cx[colIdx]}px;top:${(cy-CH/2).toFixed(1)}px;width:${CW}px;height:${CH}px;`;
@@ -4026,6 +4036,7 @@ function bk2RenderKnockout(container){
       if(fn)d.onclick=fn;
       if(t){
         d.innerHTML=fi(TEAMS[t]?.iso||'',18,3)+'<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;font-weight:700">'+t+'</span>';
+        if(isW&&isPK){d.insertAdjacentHTML('beforeend','<span style="font-size:9px;font-weight:800;color:#000;background:var(--gold);padding:1px 4px;border-radius:3px;flex-shrink:0;margin-left:2px">PK</span>');}
         if(isW&&clearFn){const xb=document.createElement('span');xb.className='bk2-mcx';xb.textContent='✕';xb.onclick=e=>{e.stopPropagation();clearFn();};d.appendChild(xb);}
       }else{d.innerHTML='<span style="font-size:11px;color:var(--t3);font-style:italic;font-weight:600;letter-spacing:.5px">TBD</span>';}
       return d;
@@ -4035,9 +4046,11 @@ function bk2RenderKnockout(container){
     container.appendChild(div);
   }
 
+  // Helper: check if R32 match at visual index vi went to penalties
+  const r32isPK=vi=>{const m=MATCHES.find(x=>x.id===R32_VIS[vi]);return !!(m&&m.pkWinner);};
   // Left R32 (cols 0, BK2_R32[0-7])
   for(let i=0;i<8;i++){const tA=bk2R32Side(i,0),tB=bk2R32Side(i,1),w=bk2R32W(i);
-    card(0,8,i,tA,tB,w,tA?()=>bk2SetR32W(i,tA):null,tB?()=>bk2SetR32W(i,tB):null,w?()=>{bk2ClearR32Down(i);bk2Save();bk2Render();}:null);}
+    card(0,8,i,tA,tB,w,tA?()=>bk2SetR32W(i,tA):null,tB?()=>bk2SetR32W(i,tB):null,w?()=>{bk2ClearR32Down(i);bk2Save();bk2Render();}:null,r32isPK(i));}
   // Left R16 (col 1, matches 0-3)
   for(let i=0;i<4;i++){const tA=bk2R16Side(i,0),tB=bk2R16Side(i,1),w=bk2R16W(i);
     card(1,4,i,tA,tB,w,tA?()=>bk2SetR16W(i,tA):null,tB?()=>bk2SetR16W(i,tB):null,w?()=>{bk2ClearR16Down(i);bk2Save();bk2Render();}:null);}
@@ -4061,7 +4074,7 @@ function bk2RenderKnockout(container){
     card(7,4,i,tA,tB,w,tA?()=>bk2SetR16W(mi,tA):null,tB?()=>bk2SetR16W(mi,tB):null,w?()=>{bk2ClearR16Down(mi);bk2Save();bk2Render();}:null);}
   // Right R32 (col 8, BK2_R32[8-15])
   for(let i=0;i<8;i++){const mi=8+i,tA=bk2R32Side(mi,0),tB=bk2R32Side(mi,1),w=bk2R32W(mi);
-    card(8,8,i,tA,tB,w,tA?()=>bk2SetR32W(mi,tA):null,tB?()=>bk2SetR32W(mi,tB):null,w?()=>{bk2ClearR32Down(mi);bk2Save();bk2Render();}:null);}
+    card(8,8,i,tA,tB,w,tA?()=>bk2SetR32W(mi,tA):null,tB?()=>bk2SetR32W(mi,tB):null,w?()=>{bk2ClearR32Down(mi);bk2Save();bk2Render();}:null,r32isPK(mi));}
 
   // Round labels at top
   ['R32','R16','QF','SF','FINAL · Jul 19','SF','QF','R16','R32'].forEach((lbl,ci)=>{
