@@ -452,6 +452,19 @@ select option{background:#0d1a2e;color:#fff}
   backdrop-filter:blur(8px)
 }
 .modal-overlay.open{display:flex}
+.modal-box{
+  background:linear-gradient(145deg,#0e1f3d 0%,#091428 100%);
+  border:1px solid rgba(255,255,255,0.12);border-radius:20px;width:100%;
+  box-shadow:0 40px 120px rgba(0,0,0,0.8),0 0 0 1px rgba(245,197,24,0.06);
+  animation:slideUp .3s cubic-bezier(.34,1.56,.64,1);
+  display:flex;flex-direction:column;max-height:85vh;
+}
+.modal-hdr{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:16px 18px;border-bottom:1px solid rgba(255,255,255,0.1);
+  font-size:14px;font-weight:700;color:var(--t1);flex-shrink:0;
+}
+#playerModalBody{overflow-y:auto;flex:1;}
 .modal{
   background:linear-gradient(145deg,#0e1f3d 0%,#091428 100%);
   border:1px solid rgba(255,255,255,0.12);border-radius:20px;padding:28px;
@@ -2161,10 +2174,16 @@ function renderLive(){
 // Fills hs/as on finished matches so the standings + fixtures update the moment a game ends.
 
 // Persist match scores across page reloads
-const SC_KEY='wc2026_sc2';
+const SC_KEY='wc2026_sc3';
 function saveScoreCache(){
   const c={};
-  MATCHES.forEach(m=>{if(m.hs!==undefined){c[m.id]={h:m.hs,a:m.as};if(m.pkWinner)c[m.id].pk=m.pkWinner;}});
+  MATCHES.forEach(m=>{
+    if(m.hs!==undefined){
+      c[m.id]={h:m.hs,a:m.as};
+      if(m.pkWinner) c[m.id].pk=m.pkWinner;
+      if(m.espnId)   c[m.id].eid=m.espnId;  // persist so loadRealScorers works after reload
+    }
+  });
   try{localStorage.setItem(SC_KEY,JSON.stringify(c));}catch(e){}
 }
 function loadScoreCache(){
@@ -2172,7 +2191,11 @@ function loadScoreCache(){
     const c=JSON.parse(localStorage.getItem(SC_KEY)||'{}');
     Object.entries(c).forEach(([id,sc])=>{
       const m=MATCHES.find(x=>x.id===+id);
-      if(m&&!m.isLive){m.hs=sc.h;m.as=sc.a;if(sc.pk)m.pkWinner=sc.pk;}
+      if(m&&!m.isLive){
+        m.hs=sc.h; m.as=sc.a;
+        if(sc.pk)  m.pkWinner=sc.pk;
+        if(sc.eid) m.espnId=sc.eid;          // restore espnId → stats & player modal work
+      }
     });
   }catch(e){}
 }
@@ -2271,72 +2294,140 @@ async function syncLiveScores(){
 
 function closePlayerModal(){document.getElementById('playerModal').style.display='none';}
 
-async function openPlayerStats(name, team, isoCode){
+// Cache for ESPN match summaries (persists for the session)
+window._psCache=window._psCache||{};
+
+function _parseZone(desc){
+  if(!desc) return {x:50,y:75,lbl:'Goal'};
+  const d=desc.toLowerCase();
+  if(d.includes('penalty'))                              return {x:50,y:88,lbl:'Penalty'};
+  if(d.includes('very close')||d.includes('close range')) return {x:50,y:92,lbl:'Close Range'};
+  if(d.includes('left side of the box'))                 return {x:28,y:80,lbl:'Left Box'};
+  if(d.includes('right side of the box'))                return {x:72,y:80,lbl:'Right Box'};
+  if(d.includes('centre of the box')||d.includes('center of the box')) return {x:50,y:80,lbl:'Center Box'};
+  if(d.includes('outside the box')||d.includes('from outside')) return {x:50,y:62,lbl:'Long Range'};
+  if(d.includes('header'))                               return {x:50,y:83,lbl:'Header'};
+  return {x:50,y:75,lbl:'Goal'};
+}
+
+function _buildPitchSVG(goalEvents){
+  const W=300,H=180;
+  const dots=goalEvents.map((g,i)=>{
+    const z=_parseZone(g.desc);
+    // slight jitter so overlapping dots separate
+    const jx=(i%3-1)*9, jy=Math.floor(i/3)*(-7);
+    const cx=W*z.x/100+jx, cy=H*z.y/100+jy;
+    return `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="9" fill="${i===0?'#f5c518':'rgba(245,197,24,0.75)'}" stroke="#000" stroke-width="1.5"/>
+      <text x="${cx.toFixed(1)}" y="${(cy+3.5).toFixed(1)}" text-anchor="middle" font-size="9" fill="#000" font-weight="800">${g.min}'</text>`;
+  }).join('');
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;max-width:320px;display:block;margin:0 auto;border-radius:8px" xmlns="http://www.w3.org/2000/svg">
+    <rect width="${W}" height="${H}" fill="#1e5c1e" rx="6"/>
+    <rect x="4" y="4" width="${W-8}" height="${H-8}" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="1.5" rx="3"/>
+    <line x1="${W/2}" y1="4" x2="${W/2}" y2="${H-4}" stroke="rgba(255,255,255,0.15)" stroke-width="1"/>
+    <circle cx="${W/2}" cy="${H/2}" r="28" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="1"/>
+    <rect x="${W*0.18}" y="4" width="${W*0.64}" height="${H*0.38}" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.22)" stroke-width="1.5"/>
+    <rect x="${W*0.33}" y="4" width="${W*0.34}" height="${H*0.14}" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.22)" stroke-width="1.5"/>
+    <rect x="${W*0.38}" y="0" width="${W*0.24}" height="7" fill="rgba(255,255,255,0.18)" stroke="rgba(255,255,255,0.6)" stroke-width="1.5"/>
+    <text x="${W/2}" y="${H*0.52}" text-anchor="middle" fill="rgba(255,255,255,0.18)" font-size="9" letter-spacing="2">PITCH</text>
+    ${dots}
+  </svg>`;
+}
+
+function _buildTimeline(goals,assists){
+  const items=goals.map(g=>({min:parseInt(g.min)||0,icon:'⚽',col:'var(--gold)',tip:`⚽ ${g.min}' vs ${g.home} ${g.hs}–${g.as} ${g.away}`}))
+    .concat(assists.map(a=>({min:parseInt(a.min)||0,icon:'🎯',col:'#7ee8a2',tip:`🎯 ${a.min}'`})));
+  const dots=items.map(it=>{
+    const pct=Math.min(it.min/120*100,99);
+    return `<div title="${it.tip}" style="position:absolute;left:${pct}%;top:50%;transform:translate(-50%,-50%);width:20px;height:20px;background:${it.col};border-radius:50%;border:2px solid #000;display:flex;align-items:center;justify-content:center;font-size:9px;cursor:default;z-index:3">${it.icon}</div>`;
+  }).join('');
+  return `<div style="position:relative;height:28px;margin:8px 4px 2px">
+    <div style="position:absolute;top:50%;left:0;right:0;height:4px;background:rgba(255,255,255,0.1);border-radius:2px;transform:translateY(-50%)"></div>
+    <div style="position:absolute;left:37.5%;top:0;bottom:0;width:2px;background:rgba(255,255,255,0.2)"></div>
+    ${dots}
+  </div>
+  <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--t3);margin:0 4px 8px">\
+    <span>0'</span><span>HT 45'</span><span>FT 90'</span><span>ET 120'</span></div>`;
+}
+
+async function openPlayerStats(name,team,isoCode){
   const modal=document.getElementById('playerModal');
   const title=document.getElementById('playerModalTitle');
   const body=document.getElementById('playerModalBody');
-  title.innerHTML=`${fi(isoCode,18,3)} ${name} <span style="font-size:12px;color:var(--t3);font-weight:400">${team}</span>`;
-  body.innerHTML='<div style="text-align:center;padding:24px;color:var(--t3)">Loading stats...</div>';
+  title.innerHTML=`${fi(isoCode,18,3)} <b>${name}</b> <span style="font-size:12px;color:var(--t3);font-weight:400">${team}</span>`;
+  body.innerHTML='<div style="text-align:center;padding:32px;color:var(--t3)"><div class="tv-spinner" style="margin:0 auto 10px"></div>Fetching match data...</div>';
   modal.style.display='flex';
 
-  // Gather goals and assists from already-loaded match details
-  const goals=[], assists=[];
-  const matchDetails=window._matchDetails||{};
-
-  // Count from _realScorers/_realAssists cached data
-  MATCHES.filter(m=>m.hs!==undefined).forEach(m=>{
-    const md=matchDetails[m.espnId];
-    if(!md) return;
-    (md.goals||[]).forEach(g=>{
-      if(g.scorer===name) goals.push({match:`${m.home} vs ${m.away}`,min:g.min,type:g.type||'Goal',opponent:m.home===team?m.away:m.home});
+  // Fetch all finished match summaries concurrently
+  const finished=MATCHES.filter(m=>m.espnId&&m.hs!==undefined);
+  const pGoals=[],pAssists=[];
+  await Promise.all(finished.map(async m=>{
+    let d=window._psCache[m.espnId];
+    if(!d){
+      try{
+        const r=await fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/summary?event='+m.espnId,{cache:'force-cache'});
+        if(!r.ok)return;
+        d=await r.json();
+        window._psCache[m.espnId]=d;
+      }catch(e){return;}
+    }
+    (d.keyEvents||[]).forEach(e=>{
+      const isGoal=e.scoringPlay||(e.type&&e.type.text==='Goal');
+      if(!isGoal)return;
+      const own=/own goal/i.test(e.text||'');
+      const ps=e.participants||[];
+      const scorer=ps[0]?.athlete?.displayName;
+      const assist=ps[1]?.athlete?.displayName;
+      const min=e.clock?.displayValue||'?';
+      if(scorer===name&&!own) pGoals.push({min,desc:e.text||'',home:m.home,away:m.away,hs:m.hs,as:m.as,stage:m.stage});
+      if(assist===name)       pAssists.push({min,desc:e.text||'',home:m.home,away:m.away,hs:m.hs,as:m.as,stage:m.stage,scorer});
     });
-    (md.assists||[]).forEach(a=>{
-      if(a.player===name) assists.push({match:`${m.home} vs ${m.away}`,min:a.min,opponent:m.home===team?m.away:m.home});
-    });
-  });
+  }));
 
-  // Build HTML
-  const totalGoals=goals.length, totalAssists=assists.length;
-  let html=`<div style="display:flex;gap:12px;margin-bottom:16px">
-    <div style="flex:1;background:var(--glass);border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center">
-      <div style="font-size:28px;font-weight:900;color:var(--gold)">${totalGoals}</div>
-      <div style="font-size:11px;color:var(--t3);font-weight:600;margin-top:2px">⚽ Goals</div>
+  const tG=pGoals.length,tA=pAssists.length;
+  let html=`<div style="display:flex;gap:10px;margin-bottom:14px">
+    <div style="flex:1;background:var(--glass);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center">
+      <div style="font-size:26px;font-weight:900;color:var(--gold)">${tG}</div>
+      <div style="font-size:10px;color:var(--t3);font-weight:700;margin-top:2px">⚽ GOALS</div>
     </div>
-    <div style="flex:1;background:var(--glass);border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center">
-      <div style="font-size:28px;font-weight:900;color:#7ee8a2">${totalAssists}</div>
-      <div style="font-size:11px;color:var(--t3);font-weight:600;margin-top:2px">🎯 Assists</div>
+    <div style="flex:1;background:var(--glass);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center">
+      <div style="font-size:26px;font-weight:900;color:#7ee8a2">${tA}</div>
+      <div style="font-size:10px;color:var(--t3);font-weight:700;margin-top:2px">🎯 ASSISTS</div>
     </div>
-    <div style="flex:1;background:var(--glass);border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center">
-      <div style="font-size:28px;font-weight:900;color:#64a0ff">${totalGoals+totalAssists}</div>
-      <div style="font-size:11px;color:var(--t3);font-weight:600;margin-top:2px">📊 G+A</div>
+    <div style="flex:1;background:var(--glass);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center">
+      <div style="font-size:26px;font-weight:900;color:#64a0ff">${tG+tA}</div>
+      <div style="font-size:10px;color:var(--t3);font-weight:700;margin-top:2px">📊 G+A</div>
     </div>
   </div>`;
 
-  if(goals.length){
-    html+=`<div style="font-size:11px;font-weight:800;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px">⚽ Goals</div>`;
-    goals.forEach(g=>{
-      html+=`<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--glass);border-radius:8px;margin-bottom:5px">
-        <span style="font-size:11px;font-weight:800;color:var(--gold);min-width:32px">${g.min}'</span>
-        <span style="flex:1;font-size:12px;font-weight:600">vs ${g.opponent}</span>
-        <span style="font-size:10px;color:var(--t3)">${g.type}</span>
+  if(tG+tA>0){
+    html+=`<div style="font-size:10px;font-weight:800;color:var(--t3);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px">📍 MATCH TIMELINE</div>`;
+    html+=_buildTimeline(pGoals,pAssists);
+    if(tG>0){
+      html+=`<div style="font-size:10px;font-weight:800;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin:10px 0 8px">⚽ GOAL LOCATIONS</div>`;
+      html+=_buildPitchSVG(pGoals);
+    }
+    html+=`<div style="font-size:10px;font-weight:800;color:var(--t3);letter-spacing:2px;text-transform:uppercase;margin:14px 0 8px">📋 MATCH BY MATCH</div>`;
+    pGoals.forEach(g=>{
+      html+=`<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--glass);border:1px solid var(--border);border-radius:8px;margin-bottom:5px">
+        <span style="font-size:10px;font-weight:800;color:var(--gold);min-width:26px">${g.min}'</span>
+        <span>⚽</span>
+        <span style="flex:1;font-size:12px;font-weight:600">${g.home} <span style="color:var(--t3);font-weight:400">${g.hs}–${g.as}</span> ${g.away}</span>
+        <span style="font-size:9px;color:var(--t3)">${g.stage}</span>
       </div>`;
     });
-  }
-
-  if(assists.length){
-    html+=`<div style="font-size:11px;font-weight:800;color:#7ee8a2;letter-spacing:2px;text-transform:uppercase;margin:12px 0 8px">🎯 Assists</div>`;
-    assists.forEach(a=>{
-      html+=`<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--glass);border-radius:8px;margin-bottom:5px">
-        <span style="font-size:11px;font-weight:800;color:#7ee8a2;min-width:32px">${a.min}'</span>
-        <span style="flex:1;font-size:12px;font-weight:600">vs ${a.opponent}</span>
+    pAssists.forEach(a=>{
+      html+=`<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--glass);border:1px solid var(--border);border-radius:8px;margin-bottom:5px">
+        <span style="font-size:10px;font-weight:800;color:#7ee8a2;min-width:26px">${a.min}'</span>
+        <span>🎯</span>
+        <span style="flex:1;font-size:12px;font-weight:600">${a.home} <span style="color:var(--t3);font-weight:400">${a.hs}–${a.as}</span> ${a.away}</span>
+        <span style="font-size:9px;color:var(--t3)">${a.stage}</span>
       </div>`;
     });
+  } else if(!finished.length){
+    html+=`<div style="text-align:center;padding:20px;color:var(--t3);font-size:13px">⚠️ Scores need to sync first — wait a few seconds and try again.</div>`;
+  } else {
+    html+=`<div style="text-align:center;padding:20px;color:var(--t3);font-size:13px">No goals or assists found for <b>${name}</b> in the tournament data.</div>`;
   }
-
-  if(!goals.length && !assists.length){
-    html+=`<div style="text-align:center;padding:20px;color:var(--t3);font-size:13px">Detailed match data loading — check back soon</div>`;
-  }
-
   body.innerHTML=html;
 }
 
