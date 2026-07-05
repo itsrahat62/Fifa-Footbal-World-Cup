@@ -2174,7 +2174,7 @@ function renderLive(){
 // Fills hs/as on finished matches so the standings + fixtures update the moment a game ends.
 
 // Persist match scores across page reloads
-const SC_KEY='wc2026_sc3';
+const SC_KEY='wc2026_sc4';
 function saveScoreCache(){
   const c={};
   MATCHES.forEach(m=>{
@@ -2221,6 +2221,35 @@ async function bootstrapHistoricScores(){
     else if(curTab==='fixtures')renderFixtures();
     else if(curTab==='stats')renderStats();
     else if(curTab==='bracket'&&typeof bkInit==='function')bkInit();
+  }
+}
+
+async function bootstrapKnockoutScores(){
+  // Fetch R32 + R16 results that may be outside the rolling window
+  const needR32=MATCHES.filter(m=>m.stage==='Round of 32'&&m.hs===undefined).length>0;
+  const needR16=MATCHES.filter(m=>m.stage==='Round of 16'&&m.hs===undefined&&new Date(m.utc)<Date.now()-3600000).length>0;
+  if(!needR32&&!needR16) return;
+  const ranges=[];
+  if(needR32){ranges.push('20260628-20260630','20260701-20260703');}
+  if(needR16){ranges.push('20260704-20260707');}
+  let changed=false;
+  for(const rng of ranges){
+    try{
+      const r=await fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates='+rng,{cache:'default'});
+      if(!r.ok)continue;
+      const data=await r.json();
+      if(_applyESPNData(data)) changed=true;
+    }catch(e){}
+  }
+  if(!changed) return;
+  saveScoreCache();
+  if(resolveKnockoutTeams()){}
+  if(typeof bk2AutoFill==='function'){bk2AutoFill();if(typeof bk2Save==='function')bk2Save();}
+  if(typeof curTab!=='undefined'){
+    if(curTab==='groups')renderGroups();
+    else if(curTab==='fixtures')renderFixtures();
+    else if(curTab==='bracket'&&typeof bkInit==='function')bkInit();
+    else if(curTab==='live')renderLive();
   }
 }
 
@@ -2271,7 +2300,7 @@ async function syncLiveScores(){
   try{
     const now=new Date();
     const fmt=d=>d.toISOString().slice(0,10).replace(/-/g,'');
-    const d0=fmt(new Date(now.getTime()-5*864e5));
+    const d0=fmt(new Date(now.getTime()-10*864e5)); // 10 days back covers all R32 (Jun 28–Jul 3)
     const d1=fmt(new Date(now.getTime()+2*864e5));
     const r=await fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=${d0}-${d1}`,{cache:'no-store'});
     if(!r.ok) return;
@@ -3983,6 +4012,7 @@ function renderTVPlaylistChannels(channels) {
   renderFixtures();updateClock();updateCD();
   syncLiveScores();                                  // pull finished-match scores immediately
   bootstrapHistoricScores();                         // one-time: fetch group stage if not cached
+  bootstrapKnockoutScores();                         // one-time: fetch R32/R16 results if missing
   setInterval(()=>{updateClock();updateCD();},1000);
   // Auto-refresh fixtures every 60s to move finished matches to previous section
   setInterval(()=>{ if(curTab==='fixtures') renderFixtures(); },60000);
@@ -4021,16 +4051,34 @@ function showTodayMatches(){
   });
   if(!today.length)return;
   const dateLabel=new Date().toLocaleDateString('en',{timeZone:tz,weekday:'short',month:'long',day:'numeric',year:'numeric'});
+  // Resolve seed codes (W74, 1A …) to human-readable names
+  function _tdmName(code){
+    if(!code) return 'TBD';
+    if(!_isSeedCode(code)) return code; // already a real team name
+    const wm=/^W(\d+)$/.exec(code);
+    if(wm){
+      const src=MATCHES.find(x=>x.id===+wm[1]);
+      if(src){
+        const w=_matchWinner(+wm[1]);
+        if(w) return w;
+        const hN=_isSeedCode(src.home)?'TBD':src.home;
+        const aN=_isSeedCode(src.away)?'TBD':src.away;
+        return hN+' / '+aN;
+      }
+    }
+    return code;
+  }
   const rows=today.map(m=>{
     const time=new Date(m.utc).toLocaleTimeString('en',{timeZone:tz,hour:'2-digit',minute:'2-digit',hour12:true});
-    const hIso=TEAMS[m.home]?.iso||'';
-    const aIso=TEAMS[m.away]?.iso||'';
+    const hName=_tdmName(m.home), aName=_tdmName(m.away);
+    const hIso=TEAMS[hName]?.iso||'';
+    const aIso=TEAMS[aName]?.iso||'';
     return`<div class="tdm-match">
 <div class="tdm-stage">${m.stage}</div>
 <div class="tdm-teams">
-  <div class="tdm-team">${fi(hIso,20,3)}<span>${m.home}</span></div>
+  <div class="tdm-team">${fi(hIso,20,3)}<span>${hName}</span></div>
   <div class="tdm-vs">VS</div>
-  <div class="tdm-team tdm-away"><span>${m.away}</span>${fi(aIso,20,3)}</div>
+  <div class="tdm-team tdm-away"><span>${aName}</span>${fi(aIso,20,3)}</div>
 </div>
 <div class="tdm-info">⏰ ${time}&nbsp;&nbsp;·&nbsp;&nbsp;${m.venue}, ${m.city}</div>
 </div>`;
