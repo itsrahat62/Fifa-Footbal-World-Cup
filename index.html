@@ -836,6 +836,59 @@ select option{background:#0d1a2e;color:#fff}
   .hdr-clock .cl-time{font-size:12px}
 }
 
+/* ══ DESIGN POLISH ══════════════════════════════════════════════════════════ */
+/* Body: richer ambient gradient */
+body{
+  background-image:
+    radial-gradient(ellipse 100% 60% at 15% -5%,rgba(79,172,254,0.10) 0%,transparent 55%),
+    radial-gradient(ellipse 70% 50% at 85% 105%,rgba(245,197,24,0.08) 0%,transparent 55%),
+    radial-gradient(ellipse 50% 40% at 55% 50%,rgba(0,245,160,0.025) 0%,transparent 60%);
+}
+/* Header: subtle gold line at bottom */
+.header{border-bottom:1px solid transparent;border-image:linear-gradient(90deg,transparent 0%,rgba(245,197,24,0.25) 30%,rgba(245,197,24,0.35) 50%,rgba(245,197,24,0.25) 70%,transparent 100%) 1;}
+/* Nav active tab: gold glow */
+.nav-tab.active{text-shadow:0 0 14px rgba(245,197,24,0.5)}
+/* Match card: left accent bar on live */
+.mc.live-card{border-left:3px solid var(--red)}
+/* Match card hover: lift + glow */
+.mc:hover{transform:translateY(-2px);box-shadow:0 12px 40px rgba(0,0,0,0.45),0 0 0 1px rgba(245,197,24,0.12),0 0 20px rgba(245,197,24,0.04)}
+/* Score: glow when finished */
+.mc-score{text-shadow:0 0 24px rgba(245,197,24,0.15)}
+/* Stage divider: taller gold bar */
+.stage-divider::before{width:4px;height:18px;box-shadow:0 0 12px var(--gold-glow)}
+/* Stats scorers: rank #1 highlight */
+.sr:first-child{background:rgba(245,197,24,0.04);border-radius:var(--r3);padding:10px 8px;margin:0 -8px}
+.sr:first-child .sr-rank{color:var(--gold);font-size:15px}
+.sr:first-child .sr-name{color:var(--gold)}
+/* Stats scorers: clickable rows */
+.sr[onclick]{transition:background .15s,padding .15s}
+.sr[onclick]:hover{background:rgba(245,197,24,0.05);border-radius:var(--r3)}
+.sr[onclick]:hover .sr-name{color:var(--gold)}
+/* Stat tiles: hover lift */
+.stat-tile{transition:transform .2s,border-color .2s}
+.stat-tile:hover{transform:translateY(-2px);border-color:rgba(245,197,24,0.2)}
+/* Hero: brighter gradient text */
+.hero h2{background:linear-gradient(135deg,rgba(255,255,255,0.95) 0%,var(--gold2) 45%,var(--gold) 65%,rgba(255,255,255,0.9) 100%);-webkit-background-clip:text;background-clip:text;filter:drop-shadow(0 0 30px rgba(245,197,24,0.2))}
+/* Hero: subtle inner glow border */
+.hero{box-shadow:inset 0 1px 0 rgba(255,255,255,0.06),0 0 80px rgba(79,172,254,0.05)}
+/* Group cards: slight lift on hover */
+.gc{transition:transform .2s,box-shadow .2s}
+.gc:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(0,0,0,0.35)}
+/* Team cards: smoother interaction */
+.tc{transition:all .22s cubic-bezier(.34,1.2,.64,1)}
+/* Today match modal: brighter top accent */
+.tdm-box{box-shadow:0 40px 120px rgba(0,0,0,0.88),0 0 0 1px rgba(245,197,24,0.12),inset 0 1px 0 rgba(255,255,255,0.07)}
+/* Match info footer: cleaner separator */
+.tdm-info{border-top:1px solid rgba(255,255,255,0.08);margin-top:6px;padding-top:6px}
+/* Player modal: gold top border accent */
+.modal-box{border-top:2px solid rgba(245,197,24,0.35)}
+/* Countdown boxes: glow */
+.cd-box{box-shadow:inset 0 1px 0 rgba(255,255,255,0.05)}
+/* Scrollbar: gold accent */
+::-webkit-scrollbar-thumb:hover{background:rgba(245,197,24,0.45)}
+
+/* ══ END DESIGN POLISH ═══════════════════════════════════════════════════════ */
+
 /* ── LIVE TV STREAMING SYSTEM ── */
 :root {
   --plyr-color-main: var(--gold);
@@ -2243,13 +2296,20 @@ async function bootstrapKnockoutScores(){
   }
   if(!changed) return;
   saveScoreCache();
-  if(resolveKnockoutTeams()){}
+  resolveKnockoutTeams();
   if(typeof bk2AutoFill==='function'){bk2AutoFill();if(typeof bk2Save==='function')bk2Save();}
+  // Force-refresh scorers with newly cached espnIds
+  _realScorers=null; _realAssists=null; _scorersLoading=false;
+  loadRealScorers(true);
+  // Refresh Today's Matches modal if still open (seed codes may now be resolved)
+  const tdmEl=document.getElementById('todayMatchModal');
+  if(tdmEl&&tdmEl.classList.contains('open')) refreshTodayMatchesList();
   if(typeof curTab!=='undefined'){
     if(curTab==='groups')renderGroups();
     else if(curTab==='fixtures')renderFixtures();
     else if(curTab==='bracket'&&typeof bkInit==='function')bkInit();
     else if(curTab==='live')renderLive();
+    else if(curTab==='stats')renderStats();
   }
 }
 
@@ -2571,9 +2631,16 @@ function _matchWinner(id){
   if(!m||m.hs===undefined||m.as===undefined) return null;
   if(m.hs>m.as) return m.home;
   if(m.as>m.hs) return m.away;
-  return m.pkWinner||null;  // draw → use penalty shootout winner if available
+  return m.pkWinner||null;
 }
-function _isSeedCode(s){ return /^([12][A-L]|3rd-[1-8]|W\d+)$/.test(s); }
+function _matchLoser(id){
+  const m=MATCHES.find(x=>x.id===id);
+  if(!m||m.hs===undefined||m.as===undefined) return null;
+  if(m.hs<m.as) return m.home;
+  if(m.as<m.hs) return m.away;
+  return m.pkWinner?(m.home===m.pkWinner?m.away:m.home):null; // PK loser
+}
+function _isSeedCode(s){ return /^([12][A-L]|3rd-[1-8]|[WL]\d+)$/.test(s); }
 function resolveKnockoutTeams(){
   const pos={}, thirds=[]; let allGroupsDone=true;
   'ABCDEFGHIJKL'.split('').forEach(g=>{
@@ -2584,7 +2651,7 @@ function resolveKnockoutTeams(){
       if(st[0]) pos['1'+g]=st[0].name; if(st[1]) pos['2'+g]=st[1].name; if(st[2]) thirds.push(st[2]);
     } else allGroupsDone=false;
   });
-  if(allGroupsDone && thirds.length){                         // rank the 8 best third-placed teams
+  if(allGroupsDone && thirds.length){
     thirds.slice().sort((a,b)=>b.pts-a.pts||b.gd-a.gd||b.gf-a.gf).slice(0,8)
       .forEach((t,i)=>{ pos['3rd-'+(i+1)]=t.name; });
   }
@@ -2595,10 +2662,13 @@ function resolveKnockoutTeams(){
       const code=m['_seed_'+side]||m[side];
       let real=null;
       if(/^[12][A-L]$/.test(code)||/^3rd-[1-8]$/.test(code)) real=pos[code];
-      else { const wm=/^W(\d+)$/.exec(code); if(wm) real=_matchWinner(+wm[1]); }
+      else {
+        const wm=/^W(\d+)$/.exec(code); if(wm) real=_matchWinner(+wm[1]);
+        if(!real){ const lm=/^L(\d+)$/.exec(code); if(lm) real=_matchLoser(+lm[1]); } // 3rd-place loser codes
+      }
       if(real){ if(!m['_seed_'+side]) m['_seed_'+side]=code; if(m[side]!==real){ m[side]=real; changed=true; } }
     });
-    if(!_isSeedCode(m.home)&&!_isSeedCode(m.away)){ if(m.tbd){ m.tbd=0; changed=true; } }  // both real → playable
+    if(!_isSeedCode(m.home)&&!_isSeedCode(m.away)){ if(m.tbd){ m.tbd=0; changed=true; } }
   });
   return changed;
 }
@@ -2713,11 +2783,11 @@ function _teamIso(name){
   for(const [n,t] of Object.entries(TEAMS)){ if(_teamKey(n)===k) return t.iso; }
   return null;
 }
-async function loadRealScorers(){
-  if(_realScorers || _scorersLoading) return;
+async function loadRealScorers(force=false){
+  if(!force && (_realScorers || _scorersLoading)) return;
   const finished=MATCHES.filter(m=>m.espnId && m.hs!==undefined);
   if(!finished.length) return;
-  _scorersLoading=true;
+  _scorersLoading=true; _realScorers=null;
   const goals={}, assists={};
   const one=async(m)=>{
     try{
@@ -3112,9 +3182,10 @@ function showTab(tab,el){
   if(el)el.classList.add('active');
   curTab=tab;renderCurrentTab();
 }
+let _tvInited=false;
 function renderCurrentTab(){
   if(curTab==='fixtures'){renderFixtures();syncLiveScores();}
-  else if(curTab==='live')renderLive();
+  else if(curTab==='live'){renderLive();if(!_tvInited){_tvInited=true;initLiveTV();}}
   else if(curTab==='groups'){renderGroups();syncLiveScores();}   // refresh scores on open
   else if(curTab==='teams')renderTeams();
   else if(curTab==='stats'){renderStats();syncLiveScores();}
@@ -3514,18 +3585,6 @@ function initLiveTV() {
   }
   loadAllChannels();   // background prefetch so search is instant
 
-  // ── (6) Resume last-watched channel; else default to first HLS channel (fast start) ──
-  let resume = null;
-  try { resume = JSON.parse(localStorage.getItem('wc2026_last_tv') || 'null'); } catch(e) {}
-  let startCh = null;
-  if (resume && resume.url) {
-    startCh = tvPresetChannels.find(c => c.url === resume.url) || resume;
-  }
-  if (!startCh) startCh = tvPresetChannels.find(c => c.type === 'hls') || tvPresetChannels[0];
-  if (startCh) {
-    playLiveTVStream(startCh.type, startCh.url, startCh.title, startCh.key);
-    tvHighlightActive(startCh.url);
-  }
 }
 
 // Highlight the channel item matching a given url as active
@@ -4007,7 +4066,7 @@ function renderTVPlaylistChannels(channels) {
   const vd=document.getElementById('vtDate'),vg=document.getElementById('vtGroup');
   if(vd)vd.classList.toggle('active',vm==='date');
   if(vg)vg.classList.toggle('active',vm==='group');
-  buildDropdowns();initLiveTV();
+  buildDropdowns();
   loadScoreCache();                                  // restore cached scores before first render
   renderFixtures();updateClock();updateCD();
   syncLiveScores();                                  // pull finished-match scores immediately
@@ -4038,41 +4097,32 @@ function renderTVPlaylistChannels(channels) {
   // Re-render bracket on resize so it always fills the available width exactly
   let _resizeTmr;
   window.addEventListener('resize',()=>{clearTimeout(_resizeTmr);_resizeTmr=setTimeout(()=>{if(curTab==='bracket')bk2Render();},120);});
-  setTimeout(showTodayMatches,500);
+  // Show Today's Matches after a short delay — bootstrap may still be running so we retry after it
+  setTimeout(showTodayMatches,800);
 })();
 
-function showTodayMatches(){
-  if(Date.now()<new Date('2026-06-11T19:00:00Z').getTime())return;
-  const tz=selectedTZ||'UTC';
-  const todayStr=new Date().toLocaleDateString('en-CA',{timeZone:tz});
-  if(localStorage.getItem('wc2026_tdm')===todayStr)return;
-  const today=MATCHES.filter(m=>{
-    return new Date(m.utc).toLocaleDateString('en-CA',{timeZone:tz})===todayStr;
-  });
-  if(!today.length)return;
-  const dateLabel=new Date().toLocaleDateString('en',{timeZone:tz,weekday:'short',month:'long',day:'numeric',year:'numeric'});
-  // Resolve seed codes (W74, 1A …) to human-readable names
+function _buildTodayRows(tz){
   function _tdmName(code){
     if(!code) return 'TBD';
-    if(!_isSeedCode(code)) return code; // already a real team name
+    if(!_isSeedCode(code)) return code;
     const wm=/^W(\d+)$/.exec(code);
-    if(wm){
+    if(wm){ const w=_matchWinner(+wm[1]); if(w) return w;
       const src=MATCHES.find(x=>x.id===+wm[1]);
-      if(src){
-        const w=_matchWinner(+wm[1]);
-        if(w) return w;
-        const hN=_isSeedCode(src.home)?'TBD':src.home;
-        const aN=_isSeedCode(src.away)?'TBD':src.away;
-        return hN+' / '+aN;
-      }
+      if(src){ const h=_isSeedCode(src.home)?'?':src.home, a=_isSeedCode(src.away)?'?':src.away; return h+' / '+a; }
+    }
+    const lm=/^L(\d+)$/.exec(code);
+    if(lm){ const l=_matchLoser(+lm[1]); if(l) return l;
+      const src=MATCHES.find(x=>x.id===+lm[1]);
+      if(src) return (src.home||'?')+' / '+(src.away||'?')+' loser';
     }
     return code;
   }
-  const rows=today.map(m=>{
+  const todayStr=new Date().toLocaleDateString('en-CA',{timeZone:tz});
+  const today=MATCHES.filter(m=>new Date(m.utc).toLocaleDateString('en-CA',{timeZone:tz})===todayStr);
+  return {today, rows:today.map(m=>{
     const time=new Date(m.utc).toLocaleTimeString('en',{timeZone:tz,hour:'2-digit',minute:'2-digit',hour12:true});
     const hName=_tdmName(m.home), aName=_tdmName(m.away);
-    const hIso=TEAMS[hName]?.iso||'';
-    const aIso=TEAMS[aName]?.iso||'';
+    const hIso=TEAMS[hName]?.iso||'', aIso=TEAMS[aName]?.iso||'';
     return`<div class="tdm-match">
 <div class="tdm-stage">${m.stage}</div>
 <div class="tdm-teams">
@@ -4082,7 +4132,21 @@ function showTodayMatches(){
 </div>
 <div class="tdm-info">⏰ ${time}&nbsp;&nbsp;·&nbsp;&nbsp;${m.venue}, ${m.city}</div>
 </div>`;
-  }).join('');
+  }).join('')};
+}
+function refreshTodayMatchesList(){
+  const tz=selectedTZ||'UTC';
+  const {today,rows}=_buildTodayRows(tz);
+  if(today.length) document.getElementById('tdmList').innerHTML=rows;
+}
+function showTodayMatches(){
+  if(Date.now()<new Date('2026-06-11T19:00:00Z').getTime())return;
+  const tz=selectedTZ||'UTC';
+  const todayStr=new Date().toLocaleDateString('en-CA',{timeZone:tz});
+  if(localStorage.getItem('wc2026_tdm')===todayStr)return;
+  const {today,rows}=_buildTodayRows(tz);
+  if(!today.length)return;
+  const dateLabel=new Date().toLocaleDateString('en',{timeZone:tz,weekday:'short',month:'long',day:'numeric',year:'numeric'});
   document.getElementById('tdmDate').textContent=dateLabel;
   document.getElementById('tdmCnt').textContent=today.length+' match'+(today.length>1?'es':'')+' today';
   document.getElementById('tdmList').innerHTML=rows;
